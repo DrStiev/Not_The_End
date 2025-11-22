@@ -182,12 +182,12 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                         KeyCode::Up | KeyCode::Right => match app.focused_section {
                             FocusedSection::WhiteBalls => {
-                                if app.white_balls < 10 {
+                                if app.white_balls < 19 {
                                     app.white_balls += 1;
                                 }
                             }
                             FocusedSection::RedBalls => {
-                                if app.red_balls < 10 {
+                                if app.red_balls < 6 {
                                     app.red_balls += 1;
                                 }
                             }
