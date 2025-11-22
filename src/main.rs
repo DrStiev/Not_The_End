@@ -255,7 +255,7 @@ fn ui(f: &mut Frame, app: &App) {
     };
 
     let white_block = Block::default()
-        .title("Quanti TRATTI vuoi usare? (↑/↓)")
+        .title(" Quanti TRATTI vuoi usare? (↑/↓) ")
         .borders(Borders::ALL)
         .style(white_style);
 
@@ -276,7 +276,7 @@ fn ui(f: &mut Frame, app: &App) {
     };
 
     let red_block = Block::default()
-        .title("Quanto è DIFFICILE la prova? (↑/↓)")
+        .title(" Quanto è DIFFICILE la prova? (↑/↓) ")
         .borders(Borders::ALL)
         .style(red_style);
 
@@ -297,7 +297,7 @@ fn ui(f: &mut Frame, app: &App) {
     };
 
     let draw_block = Block::default()
-        .title("Effettua una PROVA (↑/↓ poi Enter)")
+        .title(" Effettua una PROVA (↑/↓ poi Enter) ")
         .borders(Borders::ALL)
         .style(draw_style);
 
@@ -310,7 +310,7 @@ fn ui(f: &mut Frame, app: &App) {
     f.render_widget(draw_paragraph, right_layout[0]);
 
     // Bottone reset
-    let reset_block = Block::default().title("Reset (R)").borders(Borders::ALL);
+    let reset_block = Block::default().title(" Reset (R) ").borders(Borders::ALL);
 
     let reset_text = Line::from(vec![
         Span::styled("Premi ", Style::default()),
@@ -356,7 +356,7 @@ fn create_draw_section_content(app: &App) -> Vec<Line<'static>> {
 
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(
-        "Quanti TOKEN vuoi ESTRARRE?",
+        " Quanti TOKEN vuoi ESTRARRE? ",
         Style::default().add_modifier(Modifier::BOLD),
     )));
     lines.push(create_empty_balls_display(app.draw_count));
@@ -388,8 +388,8 @@ fn draw_popup(f: &mut Frame, app: &App) {
     let area = centered_rect(30, 25, f.area());
 
     let title = match app.popup {
-        PopupType::ConfirmDraw => "Conferma Pescata?",
-        PopupType::ConfirmRisk => "Vuoi Rischiare?",
+        PopupType::ConfirmDraw => " Conferma Pescata? ",
+        PopupType::ConfirmRisk => " Vuoi Rischiare? ",
         _ => "",
     };
 
