@@ -1,7 +1,5 @@
-#![windows_subsystem = "windows"]
-
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -153,75 +151,78 @@ fn run_app<B: ratatui::backend::Backend>(
         terminal.draw(|f| ui(f, app))?;
 
         if let Event::Key(key) = event::read()? {
-            if app.popup != PopupType::None {
-                match key.code {
-                    KeyCode::Enter => {
-                        if app.popup == PopupType::ConfirmDraw {
-                            app.perform_first_draw();
-                        } else if app.popup == PopupType::ConfirmRisk {
-                            app.perform_risk_draw();
+            // Controlla se evento e' un KeyDown non un KeyRelease
+            if key.kind == KeyEventKind::Press {
+                if app.popup != PopupType::None {
+                    match key.code {
+                        KeyCode::Enter => {
+                            if app.popup == PopupType::ConfirmDraw {
+                                app.perform_first_draw();
+                            } else if app.popup == PopupType::ConfirmRisk {
+                                app.perform_risk_draw();
+                            }
                         }
+                        KeyCode::Esc => {
+                            app.popup = PopupType::None;
+                        }
+                        _ => {}
                     }
-                    KeyCode::Esc => {
-                        app.popup = PopupType::None;
+                } else {
+                    match key.code {
+                        KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(()),
+                        KeyCode::Char('r') | KeyCode::Char('R') => {
+                            app.reset();
+                        }
+                        KeyCode::Tab => {
+                            app.focused_section = match app.focused_section {
+                                FocusedSection::WhiteBalls => FocusedSection::RedBalls,
+                                FocusedSection::RedBalls => FocusedSection::DrawInput,
+                                FocusedSection::DrawInput => FocusedSection::WhiteBalls,
+                            };
+                        }
+                        KeyCode::Up | KeyCode::Right => match app.focused_section {
+                            FocusedSection::WhiteBalls => {
+                                if app.white_balls < 10 {
+                                    app.white_balls += 1;
+                                }
+                            }
+                            FocusedSection::RedBalls => {
+                                if app.red_balls < 10 {
+                                    app.red_balls += 1;
+                                }
+                            }
+                            FocusedSection::DrawInput => {
+                                if app.draw_count < 4 {
+                                    app.draw_count += 1;
+                                }
+                            }
+                        },
+                        KeyCode::Down | KeyCode::Left => match app.focused_section {
+                            FocusedSection::WhiteBalls => {
+                                if app.white_balls > 0 {
+                                    app.white_balls -= 1;
+                                }
+                            }
+                            FocusedSection::RedBalls => {
+                                if app.red_balls > 0 {
+                                    app.red_balls -= 1;
+                                }
+                            }
+                            FocusedSection::DrawInput => {
+                                if app.draw_count > 1 {
+                                    app.draw_count -= 1;
+                                }
+                            }
+                        },
+                        KeyCode::Enter => {
+                            if app.focused_section == FocusedSection::DrawInput
+                                && !app.first_draw_complete
+                            {
+                                app.popup = PopupType::ConfirmDraw;
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                }
-            } else {
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(()),
-                    KeyCode::Char('r') | KeyCode::Char('R') => {
-                        app.reset();
-                    }
-                    KeyCode::Tab => {
-                        app.focused_section = match app.focused_section {
-                            FocusedSection::WhiteBalls => FocusedSection::RedBalls,
-                            FocusedSection::RedBalls => FocusedSection::DrawInput,
-                            FocusedSection::DrawInput => FocusedSection::WhiteBalls,
-                        };
-                    }
-                    KeyCode::Up => match app.focused_section {
-                        FocusedSection::WhiteBalls => {
-                            if app.white_balls < 10 {
-                                app.white_balls += 1;
-                            }
-                        }
-                        FocusedSection::RedBalls => {
-                            if app.red_balls < 10 {
-                                app.red_balls += 1;
-                            }
-                        }
-                        FocusedSection::DrawInput => {
-                            if app.draw_count < 4 {
-                                app.draw_count += 1;
-                            }
-                        }
-                    },
-                    KeyCode::Down => match app.focused_section {
-                        FocusedSection::WhiteBalls => {
-                            if app.white_balls > 0 {
-                                app.white_balls -= 1;
-                            }
-                        }
-                        FocusedSection::RedBalls => {
-                            if app.red_balls > 0 {
-                                app.red_balls -= 1;
-                            }
-                        }
-                        FocusedSection::DrawInput => {
-                            if app.draw_count > 1 {
-                                app.draw_count -= 1;
-                            }
-                        }
-                    },
-                    KeyCode::Enter => {
-                        if app.focused_section == FocusedSection::DrawInput
-                            && !app.first_draw_complete
-                        {
-                            app.popup = PopupType::ConfirmDraw;
-                        }
-                    }
-                    _ => {}
                 }
             }
         }
@@ -384,7 +385,7 @@ fn create_draw_section_content(app: &App) -> Vec<Line<'static>> {
 
 fn draw_popup(f: &mut Frame, app: &App) {
     // Posiziona il popup in basso per non coprire i risultati della pescata
-    let area = bottom_centered_rect(25, 25, f.area());
+    let area = centered_rect(30, 25, f.area());
 
     let title = match app.popup {
         PopupType::ConfirmDraw => "Conferma Pescata?",
@@ -400,11 +401,6 @@ fn draw_popup(f: &mut Frame, app: &App) {
     let text = match app.popup {
         PopupType::ConfirmDraw => vec![
             Line::from(""),
-            Line::from(Span::styled(
-                "Vuoi pescare?",
-                Style::default().add_modifier(Modifier::BOLD),
-            )),
-            Line::from(""),
             Line::from(vec![
                 Span::styled("Enter", Style::default().fg(Color::Green)),
                 Span::raw(" per confermare"),
@@ -415,11 +411,6 @@ fn draw_popup(f: &mut Frame, app: &App) {
             ]),
         ],
         PopupType::ConfirmRisk => vec![
-            Line::from(""),
-            Line::from(Span::styled(
-                "Vuoi rischiare?",
-                Style::default().add_modifier(Modifier::BOLD),
-            )),
             Line::from(""),
             Line::from(format!(
                 "Pescherai altri {} pallini",
@@ -454,25 +445,6 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_y) / 2),
             Constraint::Percentage(percent_y),
             Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
-}
-
-fn bottom_centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(100 - percent_y),
-            Constraint::Percentage(percent_y),
         ])
         .split(r);
 
