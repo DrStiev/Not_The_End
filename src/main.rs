@@ -10,14 +10,24 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph, Tabs, Wrap},
 };
+use std::fmt;
 use std::io;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum BallType {
     White,
     Red,
+}
+
+impl fmt::Display for BallType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            BallType::White => write!(f, "Successo"),
+            BallType::Red => write!(f, "Complicazione"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -34,6 +44,29 @@ enum FocusedSection {
     DrawInput,
 }
 
+#[derive(Debug, Clone)]
+struct DrawHistory {
+    white_balls: usize,
+    red_balls: usize,
+    first_draw: Vec<BallType>,
+    risked: bool,
+    risk_draw: Vec<BallType>,
+}
+
+impl DrawHistory {
+    fn format_balls(&self, balls: &[BallType]) -> String {
+        if balls.is_empty() {
+            return String::from("-");
+        }
+
+        balls
+            .iter()
+            .map(|b| b.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
 struct App {
     white_balls: usize,
     red_balls: usize,
@@ -43,6 +76,10 @@ struct App {
     drawn_balls: Vec<BallType>,
     first_draw_complete: bool,
     pool: Vec<BallType>,
+    current_tab: usize,
+    history: Vec<DrawHistory>,
+    current_first_draw: Vec<BallType>,
+    history_scroll: usize,
 }
 
 impl App {
@@ -56,6 +93,10 @@ impl App {
             drawn_balls: Vec::new(),
             first_draw_complete: false,
             pool: Vec::new(),
+            current_tab: 0,
+            history: Vec::new(),
+            current_first_draw: Vec::new(),
+            history_scroll: 0,
         }
     }
 
@@ -67,6 +108,7 @@ impl App {
         self.first_draw_complete = false;
         self.pool.clear();
         self.popup = PopupType::None;
+        self.current_first_draw.clear();
     }
 
     fn create_pool(&mut self) {
@@ -98,23 +140,53 @@ impl App {
     fn perform_first_draw(&mut self) {
         self.create_pool();
         let drawn = self.draw_from_pool(self.draw_count);
-        self.drawn_balls = drawn;
+        self.drawn_balls = drawn.clone();
+        self.current_first_draw = drawn;
         self.first_draw_complete = true;
 
         if self.drawn_balls.len() < 5 {
             self.popup = PopupType::ConfirmRisk;
         } else {
+            // Aggiungi alla cronologia senza rischio
+            self.history.push(DrawHistory {
+                white_balls: self.white_balls,
+                red_balls: self.red_balls,
+                first_draw: self.current_first_draw.clone(),
+                risked: false,
+                risk_draw: Vec::new(),
+            });
             self.popup = PopupType::None;
         }
     }
 
     fn perform_risk_draw(&mut self) {
         let remaining = 5 - self.drawn_balls.len();
+        let mut risk_balls = Vec::new();
         if remaining > 0 {
             let additional = self.draw_from_pool(remaining);
+            risk_balls = additional.clone();
             self.drawn_balls.extend(additional);
         }
+        // Aggiungi alla cronologia con rischio
+        self.history.push(DrawHistory {
+            white_balls: self.white_balls,
+            red_balls: self.red_balls,
+            first_draw: self.current_first_draw.clone(),
+            risked: true,
+            risk_draw: risk_balls,
+        });
         self.popup = PopupType::None;
+    }
+
+    fn cancel_draw(&mut self) {
+        // Aggiungi alla cronologia senza rischio
+        self.history.push(DrawHistory {
+            white_balls: self.white_balls,
+            red_balls: self.red_balls,
+            first_draw: self.current_first_draw.clone(),
+            risked: false,
+            risk_draw: Vec::new(),
+        });
     }
 }
 
@@ -163,6 +235,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                         }
                         KeyCode::Esc => {
+                            if app.popup == PopupType::ConfirmRisk {
+                                app.cancel_draw();
+                            }
                             app.popup = PopupType::None;
                         }
                         _ => {}
@@ -173,49 +248,76 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Char('r') | KeyCode::Char('R') => {
                             app.reset();
                         }
-                        KeyCode::Tab => {
-                            app.focused_section = match app.focused_section {
-                                FocusedSection::WhiteBalls => FocusedSection::RedBalls,
-                                FocusedSection::RedBalls => FocusedSection::DrawInput,
-                                FocusedSection::DrawInput => FocusedSection::WhiteBalls,
-                            };
+                        KeyCode::Left => {
+                            if app.current_tab > 0 {
+                                app.current_tab -= 1;
+                            }
                         }
-                        KeyCode::Up | KeyCode::Right => match app.focused_section {
-                            FocusedSection::WhiteBalls => {
-                                if app.white_balls < 19 {
-                                    app.white_balls += 1;
+                        KeyCode::Right => {
+                            if app.current_tab < 2 {
+                                app.current_tab += 1;
+                            }
+                        }
+                        KeyCode::Tab => {
+                            if app.current_tab == 0 {
+                                app.focused_section = match app.focused_section {
+                                    FocusedSection::WhiteBalls => FocusedSection::RedBalls,
+                                    FocusedSection::RedBalls => FocusedSection::DrawInput,
+                                    FocusedSection::DrawInput => FocusedSection::WhiteBalls,
+                                };
+                            }
+                        }
+                        KeyCode::Up => {
+                            if app.current_tab == 0 {
+                                match app.focused_section {
+                                    FocusedSection::WhiteBalls => {
+                                        if app.white_balls < 19 {
+                                            app.white_balls += 1;
+                                        }
+                                    }
+                                    FocusedSection::RedBalls => {
+                                        if app.red_balls < 6 {
+                                            app.red_balls += 1;
+                                        }
+                                    }
+                                    FocusedSection::DrawInput => {
+                                        if app.draw_count < 4 {
+                                            app.draw_count += 1;
+                                        }
+                                    }
+                                }
+                            } else if app.current_tab == 2 {
+                                if app.history_scroll > 0 {
+                                    app.history_scroll -= 1;
                                 }
                             }
-                            FocusedSection::RedBalls => {
-                                if app.red_balls < 6 {
-                                    app.red_balls += 1;
+                        }
+                        KeyCode::Down => {
+                            if app.current_tab == 0 {
+                                match app.focused_section {
+                                    FocusedSection::WhiteBalls => {
+                                        if app.white_balls > 0 {
+                                            app.white_balls -= 1;
+                                        }
+                                    }
+                                    FocusedSection::RedBalls => {
+                                        if app.red_balls > 0 {
+                                            app.red_balls -= 1;
+                                        }
+                                    }
+                                    FocusedSection::DrawInput => {
+                                        if app.draw_count > 1 {
+                                            app.draw_count -= 1;
+                                        }
+                                    }
                                 }
+                            } else if app.current_tab == 2 {
+                                app.history_scroll += 1;
                             }
-                            FocusedSection::DrawInput => {
-                                if app.draw_count < 4 {
-                                    app.draw_count += 1;
-                                }
-                            }
-                        },
-                        KeyCode::Down | KeyCode::Left => match app.focused_section {
-                            FocusedSection::WhiteBalls => {
-                                if app.white_balls > 0 {
-                                    app.white_balls -= 1;
-                                }
-                            }
-                            FocusedSection::RedBalls => {
-                                if app.red_balls > 0 {
-                                    app.red_balls -= 1;
-                                }
-                            }
-                            FocusedSection::DrawInput => {
-                                if app.draw_count > 1 {
-                                    app.draw_count -= 1;
-                                }
-                            }
-                        },
+                        }
                         KeyCode::Enter => {
-                            if app.focused_section == FocusedSection::DrawInput
+                            if app.current_tab == 0
+                                && app.focused_section == FocusedSection::DrawInput
                                 && !app.first_draw_complete
                             {
                                 app.popup = PopupType::ConfirmDraw;
@@ -230,10 +332,48 @@ fn run_app<B: ratatui::backend::Backend>(
 }
 
 fn ui(f: &mut Frame, app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(0)])
+        .split(f.area());
+
+    // Tabs
+    let tab_titles = vec!["Pesca", "Tab 2", "Log"];
+    let tabs = Tabs::new(tab_titles)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Naviga (←/→) "),
+        )
+        .select(app.current_tab)
+        .style(Style::default().fg(Color::White))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        );
+
+    f.render_widget(tabs, chunks[0]);
+
+    // Content based on selected tab
+    match app.current_tab {
+        0 => render_draw_tab(f, chunks[1], app),
+        1 => render_empty_tab(f, chunks[1]),
+        2 => render_history_tab(f, chunks[1], app),
+        _ => {}
+    }
+
+    // Popup
+    if app.popup != PopupType::None {
+        draw_popup(f, app);
+    }
+}
+
+fn render_draw_tab(f: &mut Frame, area: Rect, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(f.area());
+        .split(area);
 
     let left_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -328,11 +468,125 @@ fn ui(f: &mut Frame, app: &App) {
         .alignment(Alignment::Center);
 
     f.render_widget(reset_paragraph, right_layout[1]);
+}
 
-    // Popup
-    if app.popup != PopupType::None {
-        draw_popup(f, app);
+fn render_empty_tab(f: &mut Frame, area: Rect) {
+    let block = Block::default().title(" Tab 2 ").borders(Borders::ALL);
+
+    let text = Paragraph::new("Contenuto in arrivo...")
+        .block(block)
+        .alignment(Alignment::Center);
+
+    f.render_widget(text, area);
+}
+
+fn render_history_tab(f: &mut Frame, area: Rect, app: &App) {
+    let block = Block::default()
+        .title(" Log - Cronologia Prove (↑/↓ per scorrere) ")
+        .borders(Borders::ALL);
+
+    if app.history.is_empty() {
+        let text = Paragraph::new("Nessuna prova effettuata")
+            .block(block)
+            .alignment(Alignment::Center);
+        f.render_widget(text, area);
+        return;
     }
+
+    let mut lines = Vec::new();
+    lines.push(Line::from(""));
+
+    for (i, entry) in app.history.iter().enumerate().rev() {
+        lines.push(Line::from(Span::styled(
+            format!("═══ Prova #{} ═══", i + 1),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )));
+        lines.push(Line::from(""));
+
+        // Pallini bianchi usati
+        lines.push(Line::from(vec![
+            Span::styled("Traits: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::raw(format!("{}", entry.white_balls)),
+        ]));
+
+        // Pallini rossi usati
+        lines.push(Line::from(vec![
+            Span::styled(
+                "Difficoltà: ",
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(format!("{}", entry.red_balls)),
+        ]));
+
+        lines.push(Line::from(""));
+
+        // Risultato prima pescata
+        let first_draw_str = entry.format_balls(&entry.first_draw);
+        lines.push(Line::from(vec![
+            Span::styled(
+                "Token pescati: ",
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(format!("{} ({})", entry.first_draw.len(), first_draw_str)),
+        ]));
+
+        // Visualizza i pallini della prima pescata
+        let mut first_draw_spans = vec![Span::raw("  ")];
+        for ball in &entry.first_draw {
+            let (symbol, color) = match ball {
+                BallType::White => ("● ", Color::White),
+                BallType::Red => ("● ", Color::Red),
+            };
+            first_draw_spans.push(Span::styled(symbol, Style::default().fg(color)));
+        }
+        lines.push(Line::from(first_draw_spans));
+
+        lines.push(Line::from(""));
+
+        // Rischio
+        if entry.risked {
+            let risk_draw_str = entry.format_balls(&entry.risk_draw);
+            lines.push(Line::from(vec![
+                Span::styled("Rischiato: ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("Sì", Style::default().fg(Color::Green)),
+            ]));
+
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  Risultato rischio: ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(format!("{} ({})", entry.risk_draw.len(), risk_draw_str)),
+            ]));
+
+            // Visualizza i pallini del rischio
+            let mut risk_draw_spans = vec![Span::raw("    ")];
+            for ball in &entry.risk_draw {
+                let (symbol, color) = match ball {
+                    BallType::White => ("● ", Color::White),
+                    BallType::Red => ("● ", Color::Red),
+                };
+                risk_draw_spans.push(Span::styled(symbol, Style::default().fg(color)));
+            }
+            lines.push(Line::from(risk_draw_spans));
+        } else {
+            lines.push(Line::from(vec![
+                Span::styled("Rischiato: ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("No", Style::default().fg(Color::Red)),
+            ]));
+        }
+
+        lines.push(Line::from(""));
+    }
+
+    let paragraph = Paragraph::new(lines)
+        .block(block)
+        .scroll((app.history_scroll as u16, 0))
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(paragraph, area);
 }
 
 fn create_filled_balls_display(count: usize, color: Color) -> Line<'static> {
