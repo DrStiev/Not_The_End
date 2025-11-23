@@ -254,7 +254,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                         }
                         KeyCode::Right => {
-                            if app.current_tab < 2 {
+                            // total number of tabs
+                            if app.current_tab < 3 {
                                 app.current_tab += 1;
                             }
                         }
@@ -286,7 +287,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                     }
                                 }
-                            } else if app.current_tab == 2 {
+                            } else if app.current_tab == 3 {
                                 if app.history_scroll > 0 {
                                     app.history_scroll -= 1;
                                 }
@@ -311,7 +312,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                     }
                                 }
-                            } else if app.current_tab == 2 {
+                            } else if app.current_tab == 3 {
                                 app.history_scroll += 1;
                             }
                         }
@@ -338,7 +339,7 @@ fn ui(f: &mut Frame, app: &App) {
         .split(f.area());
 
     // Tabs
-    let tab_titles = vec!["Pesca", "Tab 2", "Log"];
+    let tab_titles = vec!["Pesca", "Tab 2", "Tab 3", "Log"];
     let tabs = Tabs::new(tab_titles)
         .block(
             Block::default()
@@ -359,7 +360,8 @@ fn ui(f: &mut Frame, app: &App) {
     match app.current_tab {
         0 => render_draw_tab(f, chunks[1], app),
         1 => render_empty_tab(f, chunks[1]),
-        2 => render_history_tab(f, chunks[1], app),
+        2 => render_empty_tab(f,chunks[1]),
+        3 => render_history_tab(f, chunks[1], app),
         _ => {}
     }
 
@@ -471,7 +473,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_empty_tab(f: &mut Frame, area: Rect) {
-    let block = Block::default().title(" Tab 2 ").borders(Borders::ALL);
+    let block = Block::default().title(" Tab WIP ").borders(Borders::ALL);
 
     let text = Paragraph::new("Contenuto in arrivo...")
         .block(block)
