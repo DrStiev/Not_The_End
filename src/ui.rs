@@ -16,7 +16,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     // Tabs
     let tab_titles = vec!["Fai una Prova", "Tab 2", "Tab 3", "Log"];
-    let tabs = Tabs::new(tab_titles)
+    let tabs = Tabs::new(tab_titles.clone())
         .block(
             Block::default()
                 .borders(Borders::ALL)
@@ -31,6 +31,25 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         );
 
     f.render_widget(tabs, chunks[0]);
+
+    // Calculate tab areas for mouse interaction
+    let tab_bar_inner = Rect {
+        x: chunks[0].x + 1,
+        y: chunks[0].y + 1,
+        width: chunks[0].width - 2,
+        height: chunks[0].height - 2,
+    };
+
+    app.tab_areas.clear();
+    let tab_width = tab_bar_inner.width / tab_titles.len() as u16;
+    for i in 0..tab_titles.len() {
+        app.tab_areas.push(Rect {
+            x: tab_bar_inner.x + (i as u16 * tab_width),
+            y: tab_bar_inner.y,
+            width: tab_width,
+            height: tab_bar_inner.height,
+        });
+    }
 
     // Content based on selected tab
     match app.current_tab {
@@ -268,7 +287,7 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     // Render scrollbar
     let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-    .begin_symbol(Some("↑"))
+        .begin_symbol(Some("↑"))
         .end_symbol(Some("↓"));
 
     f.render_stateful_widget(scrollbar, area, &mut app.vertical_scroll_state);

@@ -1,4 +1,5 @@
 use rand::prelude::IndexedRandom;
+use ratatui::prelude::Rect;
 use ratatui::widgets::ScrollbarState;
 use std::fmt;
 
@@ -68,6 +69,11 @@ pub struct App {
     pub current_first_draw: Vec<BallType>,
     pub vertical_scroll: usize,
     pub vertical_scroll_state: ScrollbarState,
+    // Areas for mouse interaction
+    pub tab_areas: Vec<Rect>,
+    pub white_balls_area: Rect,
+    pub red_balls_area: Rect,
+    pub draw_input_area: Rect,
 }
 
 impl App {
@@ -86,6 +92,11 @@ impl App {
             current_first_draw: Vec::new(),
             vertical_scroll: 0,
             vertical_scroll_state: ScrollbarState::default(),
+            // Areas for mouse interaction
+            tab_areas: Vec::new(),
+            white_balls_area: Rect::default(),
+            red_balls_area: Rect::default(),
+            draw_input_area: Rect::default(),
         }
     }
 
@@ -186,4 +197,32 @@ impl App {
         let content_height = self.history.len() * 13;
         self.vertical_scroll_state = self.vertical_scroll_state.content_length(content_height);
     }
+
+    pub fn handle_mouse_click(&mut self, x: u16, y: u16) {
+        // Check tab clicks
+        for (i, area) in self.tab_areas.iter().enumerate() {
+            if x >= area.x && x < area.x + area.width && y >= area.y && y < area.y + area.height {
+                self.current_tab = i;
+                return;
+            }
+        }
+
+        // Tab 0 specific areas
+        if self.current_tab == 0 {
+            if is_inside(x, y, &self.white_balls_area) {
+                self.focused_section = FocusedSection::WhiteBalls;
+            } else if is_inside(x, y, &self.red_balls_area) {
+                self.focused_section = FocusedSection::RedBalls;
+            } else if is_inside(x, y, &self.draw_input_area) {
+                self.focused_section = FocusedSection::DrawInput;
+                if !self.first_draw_complete {
+                    self.popup = PopupType::ConfirmDraw;
+                }
+            }
+        }
+    }
+}
+
+fn is_inside(x: u16, y: u16, area: &Rect) -> bool {
+    x >= area.x && x < area.x + area.width && y >= area.y && y < area.y + area.height
 }
