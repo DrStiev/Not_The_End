@@ -12,8 +12,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Tabs, Wrap},
 };
-use std::fmt;
-use std::io;
+use std::{fmt, io};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum BallType {
@@ -339,7 +338,7 @@ fn ui(f: &mut Frame, app: &App) {
         .split(f.area());
 
     // Tabs
-    let tab_titles = vec!["Pesca", "Tab 2", "Tab 3", "Log"];
+    let tab_titles = vec!["Fai una Prova", "Tab 2", "Tab 3", "Log"];
     let tabs = Tabs::new(tab_titles)
         .block(
             Block::default()
@@ -359,8 +358,8 @@ fn ui(f: &mut Frame, app: &App) {
     // Content based on selected tab
     match app.current_tab {
         0 => render_draw_tab(f, chunks[1], app),
-        1 => render_empty_tab(f, chunks[1]),
-        2 => render_empty_tab(f,chunks[1]),
+        1 => render_empty_tab(f, chunks[1], "Tab 2"),
+        2 => render_empty_tab(f, chunks[1], "Tab 3"),
         3 => render_history_tab(f, chunks[1], app),
         _ => {}
     }
@@ -472,8 +471,8 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(reset_paragraph, right_layout[1]);
 }
 
-fn render_empty_tab(f: &mut Frame, area: Rect) {
-    let block = Block::default().title(" Tab WIP ").borders(Borders::ALL);
+fn render_empty_tab(f: &mut Frame, area: Rect, title: &str) {
+    let block = Block::default().title(title).borders(Borders::ALL);
 
     let text = Paragraph::new("Contenuto in arrivo...")
         .block(block)
