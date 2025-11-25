@@ -41,14 +41,17 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     };
 
     app.tab_areas.clear();
-    let tab_width = tab_bar_inner.width / tab_titles.len() as u16;
-    for i in 0..tab_titles.len() {
+    let mut current_x = tab_bar_inner.x + 1; // Start with 1 space padding
+
+    for title in &tab_titles {
+        let tab_width = title.len() as u16 + 2; // Title + 1 space on each side
         app.tab_areas.push(Rect {
-            x: tab_bar_inner.x + (i as u16 * tab_width),
+            x: current_x,
             y: tab_bar_inner.y,
             width: tab_width,
             height: tab_bar_inner.height,
         });
+        current_x += tab_width + 1; // Move to next tab position (with separator)
     }
 
     // Content based on selected tab
@@ -66,7 +69,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     }
 }
 
-fn render_draw_tab(f: &mut Frame, area: Rect, app: &App) {
+fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -81,6 +84,11 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &App) {
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(85), Constraint::Percentage(15)])
         .split(main_layout[1]);
+
+    // Store areas for mouse interaction (entire widget including borders)
+    app.white_balls_area = left_layout[0];
+    app.red_balls_area = left_layout[1];
+    app.draw_input_area = right_layout[0];
 
     // Sezione pallini bianchi
     let white_style = if app.focused_section == FocusedSection::WhiteBalls {

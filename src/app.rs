@@ -65,6 +65,7 @@ pub struct App {
     pub first_draw_complete: bool,
     pub pool: Vec<BallType>,
     pub current_tab: usize,
+    // Log data
     pub history: Vec<DrawHistory>,
     pub current_first_draw: Vec<BallType>,
     pub vertical_scroll: usize,
@@ -74,6 +75,7 @@ pub struct App {
     pub white_balls_area: Rect,
     pub red_balls_area: Rect,
     pub draw_input_area: Rect,
+    // Graph data
 }
 
 impl App {
@@ -88,6 +90,7 @@ impl App {
             first_draw_complete: false,
             pool: Vec::new(),
             current_tab: 0,
+            // Log data
             history: Vec::new(),
             current_first_draw: Vec::new(),
             vertical_scroll: 0,
@@ -97,6 +100,7 @@ impl App {
             white_balls_area: Rect::default(),
             red_balls_area: Rect::default(),
             draw_input_area: Rect::default(),
+            // Graph data
         }
     }
 
