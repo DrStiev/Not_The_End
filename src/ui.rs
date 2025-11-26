@@ -66,7 +66,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     match app.current_tab {
         0 => render_draw_tab(f, chunks[1], app),
         1 => render_graph_tab(f, chunks[1], app),
-        2 => render_list_tab(f, chunks[1]),
+        2 => render_list_tab(f, chunks[1], app),
         3 => render_history_tab(f, chunks[1], app),
         _ => {}
     }
@@ -79,6 +79,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     // Node editing popup
     if app.editing_node {
         draw_node_edit_popup(f, app);
+    }
+
+    // List editing popup
+    if app.editing_list_item {
+        draw_list_edit_popup(f, app);
     }
 }
 
@@ -368,17 +373,159 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_stateful_widget(scrollbar, area, &mut app.v_scroll_graph_state);
 }
 
-fn render_list_tab(f: &mut Frame, area: Rect) {
-    let block = Block::default()
-        .title("Scheda HexSys (Click per selezionare, Enter per modificare)")
+fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
+    let main_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(8),  // Misfortunes
+            Constraint::Length(12), // Resources
+            Constraint::Min(0),     // Lessons
+        ])
+        .split(area);
+
+    // Misfortunes section (4 zones)
+    let misfortunes_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+        ])
+        .split(main_layout[0]);
+
+    for i in 0..4 {
+        let is_selected = app.selected_list_item == Some((0, i));
+        let style = if is_selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        let block = Block::default()
+            .title(" SVENTURA ")
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .style(style);
+
+        let text = if app.list_data.misfortunes[i].is_empty() {
+            "[Vuoto]"
+        } else {
+            &app.list_data.misfortunes[i]
+        };
+
+        let paragraph = Paragraph::new(text)
+            .block(block)
+            .wrap(Wrap { trim: true })
+            .alignment(Alignment::Center);
+
+        app.misfortunes_area[i] = misfortunes_layout[i];
+        f.render_widget(paragraph, misfortunes_layout[i]);
+    }
+
+    // Resources section (2 lists of 5)
+    let resources_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(main_layout[1]);
+
+    // Left resources
+    let left_block = Block::default()
+        .title(" Di quali RISORSE dispongo? ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
-    let text = Paragraph::new("Contenuto del tab in arrivo...")
-        .block(block)
-        .alignment(Alignment::Center);
+    let left_items: Vec<Line> = app
+        .list_data
+        .left_resources
+        .iter()
+        .enumerate()
+        .map(|(i, text)| {
+            let is_selected = app.selected_list_item == Some((1, i));
+            let style = if is_selected {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+            let content = if text.is_empty() { "[Vuoto]" } else { text };
+            Line::from(Span::styled(content, style))
+        })
+        .collect();
 
-    f.render_widget(text, area);
+    let left_paragraph = Paragraph::new(left_items).block(left_block);
+    app.resources_area[0] = resources_layout[0];
+    f.render_widget(left_paragraph, resources_layout[0]);
+
+    // Right resources
+    let right_block = Block::default()
+        .title(" Di quali RISORSE dispongo? ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+
+    let right_items: Vec<Line> = app
+        .list_data
+        .right_resources
+        .iter()
+        .enumerate()
+        .map(|(i, text)| {
+            let is_selected = app.selected_list_item == Some((2, i));
+            let style = if is_selected {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+            let content = if text.is_empty() { "[Vuoto]" } else { text };
+            Line::from(Span::styled(content, style))
+        })
+        .collect();
+
+    let right_paragraph = Paragraph::new(right_items).block(right_block);
+    app.resources_area[1] = resources_layout[1];
+    f.render_widget(right_paragraph, resources_layout[1]);
+
+    // Lessons section (3 rectangles)
+    let lessons_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+        ])
+        .split(main_layout[2]);
+
+    for i in 0..3 {
+        let is_selected = app.selected_list_item == Some((3, i));
+        let style = if is_selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        let block = Block::default()
+            .title(" LEZIONE ")
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .style(style);
+
+        let text = if app.list_data.lessons[i].is_empty() {
+            "[Vuoto]"
+        } else {
+            &app.list_data.lessons[i]
+        };
+
+        let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
+
+        app.lections_area[i] = lessons_layout[i];
+        f.render_widget(paragraph, lessons_layout[i]);
+    }
 }
 
 fn render_empty_tab(f: &mut Frame, area: Rect, title: &str) {
@@ -656,6 +803,34 @@ fn draw_node_edit_popup(f: &mut Frame, app: &App) {
 
     let paragraph = Paragraph::new(text)
         .block(popup_block)
+        .alignment(Alignment::Center);
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn draw_list_edit_popup(f: &mut Frame, app: &App) {
+    let area = centered_rect(70, 30, f.area());
+
+    let popup_block = Block::default()
+        .title(Line::from("Modifica (Esc per confermare)").alignment(Alignment::Center))
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(Style::default().bg(Color::Black).fg(Color::Yellow));
+
+    let text = vec![
+        Line::from(""),
+        Line::from(Span::styled(
+            &app.list_edit_buffer,
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(Span::styled("▌", Style::default().fg(Color::Green))),
+    ];
+
+    let paragraph = Paragraph::new(text)
+        .block(popup_block)
+        .wrap(Wrap { trim: true })
         .alignment(Alignment::Center);
 
     f.render_widget(Clear, area);

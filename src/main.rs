@@ -69,6 +69,30 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                         continue;
                     }
+                    // TODO: handle NewLine character as part of input string
+                    if app.editing_list_item {
+                        match key.code {
+                            KeyCode::Esc => {
+                                app.finish_list_editing();
+                            }
+                            KeyCode::Char(c) => {
+                                let max_len = match app.selected_list_item {
+                                    Some((0, _)) => 120,               // Misfortunes
+                                    Some((1, _)) | Some((2, _)) => 50, // Resources
+                                    Some((3, _)) => 250,               // Lessons
+                                    _ => 50,
+                                };
+                                if app.list_edit_buffer.len() < max_len {
+                                    app.list_edit_buffer.push(c);
+                                }
+                            }
+                            KeyCode::Backspace => {
+                                app.list_edit_buffer.pop();
+                            }
+                            _ => {}
+                        }
+                        continue;
+                    }
                     if app.popup != PopupType::None {
                         match key.code {
                             KeyCode::Enter => {
@@ -150,6 +174,24 @@ fn run_app<B: ratatui::backend::Backend>(
                                         app.v_scroll_graph_state =
                                             app.v_scroll_graph_state.position(app.v_scroll_graph);
                                     }
+                                } else if app.current_tab == 2 {
+                                    if let Some((section, idx)) = app.selected_list_item {
+                                        match section {
+                                            1 => {
+                                                if idx > 0 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx - 1));
+                                                }
+                                            }
+                                            2 => {
+                                                if idx > 0 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx - 1));
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                 }
                             }
                             KeyCode::Down => {
@@ -186,6 +228,24 @@ fn run_app<B: ratatui::backend::Backend>(
                                         app.v_scroll_graph_state =
                                             app.v_scroll_graph_state.position(app.v_scroll_graph);
                                     }
+                                } else if app.current_tab == 2 {
+                                    if let Some((section, idx)) = app.selected_list_item {
+                                        match section {
+                                            1 => {
+                                                if idx < 4 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx + 1));
+                                                }
+                                            }
+                                            2 => {
+                                                if idx < 4 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx + 1));
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                 }
                             }
                             KeyCode::Enter => {
@@ -204,9 +264,10 @@ fn run_app<B: ratatui::backend::Backend>(
                                     } else if app.focused_section == FocusedSection::RandomMode {
                                         app.random_mode = !app.random_mode;
                                     }
-                                }
-                                if app.current_tab == 1 && app.selected_node.is_some() {
+                                } else if app.current_tab == 1 && app.selected_node.is_some() {
                                     app.start_node_editing();
+                                } else if app.current_tab == 2 && app.selected_list_item.is_some() {
+                                    app.start_list_editing();
                                 }
                             }
                             _ => {}
@@ -215,7 +276,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 }
             }
             Event::Mouse(mouse) => {
-                if app.popup != PopupType::None {
+                if app.popup != PopupType::None || app.editing_node {
                     continue;
                 }
 

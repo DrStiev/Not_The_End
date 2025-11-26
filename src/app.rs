@@ -37,6 +37,13 @@ pub enum FocusedSection {
     ForcedFour,
 }
 
+// #[derive(Debug, PartialEq)]
+// pub enum CharacterSheetSection {
+//     Misfortunes,
+//     Resources,
+//     Lections,
+// }
+
 #[derive(Debug, Clone)]
 pub struct DrawHistory {
     pub white_balls: usize,
@@ -78,6 +85,37 @@ struct HoneycombData {
     nodes: Vec<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ListData {
+    pub misfortunes: [String; 4],
+    pub left_resources: [String; 5],
+    pub right_resources: [String; 5],
+    pub lessons: [String; 3],
+}
+
+impl Default for ListData {
+    fn default() -> Self {
+        ListData {
+            misfortunes: [String::new(), String::new(), String::new(), String::new()],
+            left_resources: [
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+            ],
+            right_resources: [
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+            ],
+            lessons: [String::new(), String::new(), String::new()],
+        }
+    }
+}
+
 pub struct App {
     pub white_balls: usize,
     pub red_balls: usize,
@@ -100,6 +138,10 @@ pub struct App {
     pub draw_input_area: Rect,
     pub random_mode_area: Rect,
     pub forced_four_area: Rect,
+    // pub character_sheet_section: CharacterSheetSection,
+    pub misfortunes_area: [Rect; 4],
+    pub resources_area: [Rect; 2],
+    pub lections_area: [Rect; 3],
     // Honeycomb grid
     pub honeycomb_nodes: Vec<HoneycombNode>,
     pub selected_node: Option<usize>,
@@ -111,11 +153,18 @@ pub struct App {
     // New modes
     pub random_mode: bool,
     pub forced_four_mode: bool,
+    // List tab data
+    pub list_data: ListData,
+    pub selected_list_item: Option<(usize, usize)>, // (section, index)
+    pub editing_list_item: bool,
+    pub list_edit_buffer: String,
 }
 
 impl App {
     pub fn new() -> App {
         let honeycomb_nodes = Self::load_honeycomb_data();
+        let list_data = Self::load_list_data();
+
         App {
             white_balls: 0,
             red_balls: 0,
@@ -138,6 +187,15 @@ impl App {
             draw_input_area: Rect::default(),
             random_mode_area: Rect::default(),
             forced_four_area: Rect::default(),
+            // character_sheet_section: CharacterSheetSection::Misfortunes,
+            misfortunes_area: [
+                Rect::default(),
+                Rect::default(),
+                Rect::default(),
+                Rect::default(),
+            ],
+            resources_area: [Rect::default(), Rect::default()],
+            lections_area: [Rect::default(), Rect::default(), Rect::default()],
             // Honeycomb grid
             honeycomb_nodes,
             selected_node: None,
@@ -149,6 +207,11 @@ impl App {
             // New mode
             random_mode: false,
             forced_four_mode: false,
+            // List tab data
+            list_data,
+            selected_list_item: None,
+            editing_list_item: false,
+            list_edit_buffer: String::new(),
         }
     }
 
@@ -161,7 +224,17 @@ impl App {
         Self::create_honeycomb_layout()
     }
 
-    fn save_honeycomb_data(&self) {
+    fn load_list_data() -> ListData {
+        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
+            if let Ok(data) = toml::from_str::<ListData>(&contents) {
+                return data;
+            }
+        }
+        ListData::default()
+    }
+
+    // TODO: not the best way to do it but good for now
+    fn save_data(&self) {
         let data = HoneycombData {
             nodes: self
                 .honeycomb_nodes
@@ -170,8 +243,10 @@ impl App {
                 .collect(),
         };
 
-        if let Ok(toml_string) = toml::to_string_pretty(&data) {
-            let _ = fs::write(DATA_FILE, toml_string);
+        if let Ok(toml_string_1) = toml::to_string_pretty(&data) {
+            if let Ok(toml_string_2) = toml::to_string_pretty(&self.list_data) {
+                let _ = fs::write(DATA_FILE, toml_string_1 + &toml_string_2);
+            }
         }
     }
 
@@ -333,10 +408,38 @@ impl App {
     pub fn finish_node_editing(&mut self) {
         if let Some(idx) = self.selected_node {
             self.honeycomb_nodes[idx].text = self.node_edit_buffer.clone();
-            self.save_honeycomb_data();
+            self.save_data();
         }
         self.editing_node = false;
         self.node_edit_buffer.clear();
+    }
+
+    pub fn start_list_editing(&mut self) {
+        if let Some((section, idx)) = self.selected_list_item {
+            self.editing_list_item = true;
+            self.list_edit_buffer = match section {
+                0 => self.list_data.misfortunes[idx].clone(),
+                1 => self.list_data.left_resources[idx].clone(),
+                2 => self.list_data.right_resources[idx].clone(),
+                3 => self.list_data.lessons[idx].clone(),
+                _ => String::new(),
+            };
+        }
+    }
+
+    pub fn finish_list_editing(&mut self) {
+        if let Some((section, idx)) = self.selected_list_item {
+            match section {
+                0 => self.list_data.misfortunes[idx] = self.list_edit_buffer.clone(),
+                1 => self.list_data.left_resources[idx] = self.list_edit_buffer.clone(),
+                2 => self.list_data.right_resources[idx] = self.list_edit_buffer.clone(),
+                3 => self.list_data.lessons[idx] = self.list_edit_buffer.clone(),
+                _ => {}
+            }
+            self.save_data();
+        }
+        self.editing_list_item = false;
+        self.list_edit_buffer.clear();
     }
 
     pub fn reset(&mut self) {
@@ -469,9 +572,6 @@ impl App {
                 self.focused_section = FocusedSection::RedBalls;
             } else if is_inside(x, y, &self.draw_input_area) {
                 self.focused_section = FocusedSection::DrawInput;
-                // if !self.first_draw_complete {
-                //     self.popup = PopupType::ConfirmDraw;
-                // }
             } else if is_inside(x, y, &self.random_mode_area) {
                 self.random_mode = !self.random_mode;
             } else if is_inside(x, y, &self.forced_four_area) {
@@ -480,6 +580,23 @@ impl App {
                     self.draw_count = 4;
                 } else {
                     self.draw_count = 1;
+                }
+            }
+        } else if self.current_tab == 2 {
+            // Tab 2 specific areas
+            for idx in 0..4 {
+                if is_inside(x, y, &self.misfortunes_area[idx]) && !self.editing_list_item {
+                    self.selected_list_item = Some((0, idx));
+                }
+            }
+            for idx in 0..2 {
+                if is_inside(x, y, &self.resources_area[idx]) && !self.editing_list_item {
+                    self.selected_list_item = Some((idx + 1, 0));
+                }
+            }
+            for idx in 0..3 {
+                if is_inside(x, y, &self.lections_area[idx]) && !self.editing_list_item {
+                    self.selected_list_item = Some((3, idx));
                 }
             }
         }
