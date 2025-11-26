@@ -3,10 +3,12 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, Tabs, Wrap},
+    widgets::{
+        Block, BorderType, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, Tabs, Wrap,
+    },
 };
 
-use crate::app::{App, BallType, FocusedSection, PopupType};
+use super::app::{App, BallType, FocusedSection, PopupType};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -15,11 +17,17 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(f.area());
 
     // Tabs
-    let tab_titles = vec!["Fai una Prova", "Tab 2", "Tab 3", "Log"];
+    let tab_titles = vec![
+        "Fai una Prova",
+        "Scheda Personaggio",
+        "Scheda Personaggio 2",
+        "Log Prove Effettuate",
+    ];
     let tabs = Tabs::new(tab_titles.clone())
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
                 .title(" Naviga (Tab) "),
         )
         .select(app.current_tab)
@@ -57,8 +65,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     // Content based on selected tab
     match app.current_tab {
         0 => render_draw_tab(f, chunks[1], app),
-        1 => render_empty_tab(f, chunks[1], "Tab 2"),
-        2 => render_empty_tab(f, chunks[1], "Tab 3"),
+        1 => render_graph_tab(f, chunks[1], app),
+        2 => render_list_tab(f, chunks[1]),
         3 => render_history_tab(f, chunks[1], app),
         _ => {}
     }
@@ -66,6 +74,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     // Popup
     if app.popup != PopupType::None {
         draw_popup(f, app);
+    }
+
+    // Node editing popup
+    if app.editing_node {
+        draw_node_edit_popup(f, app);
     }
 }
 
@@ -82,12 +95,23 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     let right_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(85), Constraint::Percentage(15)])
+        .constraints([
+            Constraint::Percentage(50),
+            Constraint::Percentage(30),
+            Constraint::Percentage(20),
+        ])
         .split(main_layout[1]);
+
+    let right_middle_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(right_layout[1]);
 
     // Store areas for mouse interaction (entire widget including borders)
     app.white_balls_area = left_layout[0];
     app.red_balls_area = left_layout[1];
+    app.random_mode_area = right_middle_layout[0];
+    app.forced_four_area = right_middle_layout[1];
     app.draw_input_area = right_layout[0];
 
     // Sezione pallini bianchi
@@ -102,6 +126,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let white_block = Block::default()
         .title(" Quanti TRATTI vuoi usare? (↑/↓) ")
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .style(white_style);
 
     let white_balls_text = create_filled_balls_display(app.white_balls, Color::White);
@@ -109,7 +134,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .block(white_block)
         .alignment(Alignment::Center);
 
-    f.render_widget(white_paragraph, left_layout[0]);
+    f.render_widget(white_paragraph, app.white_balls_area);
 
     // Sezione pallini rossi
     let red_style = if app.focused_section == FocusedSection::RedBalls {
@@ -123,6 +148,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let red_block = Block::default()
         .title(" Quanto è DIFFICILE la prova? (↑/↓) ")
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .style(red_style);
 
     let red_balls_text = create_filled_balls_display(app.red_balls, Color::Red);
@@ -130,7 +156,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .block(red_block)
         .alignment(Alignment::Center);
 
-    f.render_widget(red_paragraph, left_layout[1]);
+    f.render_widget(red_paragraph, app.red_balls_area);
 
     // Sezione pescata
     let draw_style = if app.focused_section == FocusedSection::DrawInput {
@@ -144,6 +170,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let draw_block = Block::default()
         .title(" Effettua una PROVA (↑/↓ poi Enter) ")
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .style(draw_style);
 
     let draw_content = create_draw_section_content(app);
@@ -152,10 +179,88 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .alignment(Alignment::Center)
         .wrap(Wrap { trim: true });
 
-    f.render_widget(draw_paragraph, right_layout[0]);
+    f.render_widget(draw_paragraph, app.draw_input_area);
+
+    // Bottone Confusione
+    let confusion_style = if app.focused_section == FocusedSection::RandomMode {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else if app.random_mode {
+        Style::default()
+            .fg(Color::Green)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+
+    let confusion_block = Block::default()
+        .title(" Confusione ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(confusion_style);
+
+    let confusion_text = Line::from(vec![
+        Span::styled("Nella ", Style::default()),
+        Span::styled("prossima ", Style::default()),
+        Span::styled("PROVA", Style::default()),
+        Span::styled(" aggiungi ", Style::default()),
+        Span::styled("al ", Style::default()),
+        Span::styled("POOL ", Style::default()),
+        Span::styled("○ ", Style::default()),
+        Span::styled("invece ", Style::default()),
+        Span::styled("di ", Style::default()),
+        Span::styled("●", Style::default().fg(Color::White)),
+    ]);
+
+    let confusion_paragraph = Paragraph::new(confusion_text)
+        .block(confusion_block)
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(confusion_paragraph, right_middle_layout[0]);
+
+    // Bottone Adrenalina
+    let adrenalin_style = if app.focused_section == FocusedSection::ForcedFour {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else if app.forced_four_mode {
+        Style::default()
+            .fg(Color::Green)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    let adrenalin_block = Block::default()
+        .title(" Adrenalina ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(adrenalin_style);
+
+    let adrenalin_text = Line::from(vec![
+        Span::styled("Nella ", Style::default()),
+        Span::styled("prossima ", Style::default()),
+        Span::styled("PROVA", Style::default()),
+        Span::styled(" dovrai ", Style::default()),
+        Span::styled("ESTRARRE", Style::default()),
+        Span::styled(" almeno ", Style::default()),
+        Span::styled("4 ", Style::default()),
+        Span::styled("○", Style::default()),
+    ]);
+
+    let adrenalin_paragraph = Paragraph::new(adrenalin_text)
+        .block(adrenalin_block)
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(adrenalin_paragraph, right_middle_layout[1]);
 
     // Bottone reset
-    let reset_block = Block::default().title(" Reset (R) ").borders(Borders::ALL);
+    let reset_block = Block::default()
+        .title(" Reset (R) ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
 
     let reset_text = Line::from(vec![
         Span::styled("Premi ", Style::default()),
@@ -172,11 +277,115 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .block(reset_block)
         .alignment(Alignment::Center);
 
-    f.render_widget(reset_paragraph, right_layout[1]);
+    f.render_widget(reset_paragraph, right_layout[2]);
+}
+
+fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
+    let block = Block::default()
+        .title("Scheda HexSys (Click per selezionare, Enter per modificare)")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+
+    let inner_area = block.inner(area);
+    f.render_widget(block, area);
+
+    // Store area for click detection
+    app.graph_area = area;
+
+    // Check if area is too small
+    if inner_area.width < 30 || inner_area.height < 20 {
+        let warning =
+            Paragraph::new("Finestra troppo piccola!\nIngrandire per visualizzare la scheda.")
+                .alignment(Alignment::Center)
+                .style(Style::default().fg(Color::Red));
+        f.render_widget(warning, inner_area);
+        return;
+    }
+
+    // Calculate center of the area
+    let center_x = inner_area.x + inner_area.width / 2;
+    let center_y = inner_area.y + inner_area.height / 2;
+
+    // Render each node
+    for (i, node) in app.honeycomb_nodes.iter().enumerate() {
+        // Calculate node position with proper bounds checking
+        let node_x_calc = center_x as i32 + node.x as i32;
+        let node_y_calc = center_y as i32 + node.y as i32;
+
+        // Skip if node would be outside bounds
+        if node_x_calc < inner_area.x as i32
+            || node_y_calc < inner_area.y as i32
+            || node_x_calc + node.width as i32 > (inner_area.x + inner_area.width) as i32
+            || node_y_calc + node.height as i32 > (inner_area.y + inner_area.height) as i32
+        {
+            continue;
+        }
+
+        let node_x = node_x_calc as u16;
+        let node_y = node_y_calc as u16;
+
+        let is_selected = app.selected_node == Some(i);
+
+        let node_style = if is_selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        let node_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .style(node_style);
+
+        let node_rect = Rect {
+            x: node_x,
+            y: node_y,
+            width: node.width,
+            height: node.height,
+        };
+
+        let node_text = if node.text.is_empty() {
+            "[Vuoto]"
+        } else {
+            &node.text
+        };
+
+        let paragraph = Paragraph::new(node_text)
+            .block(node_block)
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
+
+        f.render_widget(paragraph, node_rect);
+    }
+
+    // Render scrollbar
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(Some("↑"))
+        .end_symbol(Some("↓"));
+
+    f.render_stateful_widget(scrollbar, area, &mut app.v_scroll_graph_state);
+}
+
+fn render_list_tab(f: &mut Frame, area: Rect) {
+    let block = Block::default()
+        .title("Scheda HexSys (Click per selezionare, Enter per modificare)")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+
+    let text = Paragraph::new("Contenuto del tab in arrivo...")
+        .block(block)
+        .alignment(Alignment::Center);
+
+    f.render_widget(text, area);
 }
 
 fn render_empty_tab(f: &mut Frame, area: Rect, title: &str) {
-    let block = Block::default().title(title).borders(Borders::ALL);
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
 
     let text = Paragraph::new("Contenuto in arrivo...")
         .block(block)
@@ -188,7 +397,8 @@ fn render_empty_tab(f: &mut Frame, area: Rect, title: &str) {
 fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let block = Block::default()
         .title(" Log - Cronologia Prove (↑/↓ per scorrere) ")
-        .borders(Borders::ALL);
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
 
     if app.history.is_empty() {
         let text = Paragraph::new("Nessuna prova effettuata")
@@ -362,6 +572,7 @@ fn draw_popup(f: &mut Frame, app: &App) {
     let popup_block = Block::default()
         .title(Line::from(title).alignment(Alignment::Center))
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .style(Style::default().bg(Color::Black));
 
     let text = match app.popup {
@@ -422,4 +633,31 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+fn draw_node_edit_popup(f: &mut Frame, app: &App) {
+    let area = centered_rect(50, 20, f.area());
+
+    let popup_block = Block::default()
+        .title(Line::from("Modifica Hex (Esc per confermare)").alignment(Alignment::Center))
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(Style::default().bg(Color::Black).fg(Color::Yellow));
+
+    let text = vec![
+        Line::from(""),
+        Line::from(Span::styled(
+            &app.node_edit_buffer,
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(Span::styled("▌", Style::default().fg(Color::Green))),
+    ];
+
+    let paragraph = Paragraph::new(text)
+        .block(popup_block)
+        .alignment(Alignment::Center);
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
 }

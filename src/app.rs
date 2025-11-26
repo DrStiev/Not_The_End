@@ -1,7 +1,10 @@
 use rand::prelude::IndexedRandom;
 use ratatui::prelude::Rect;
 use ratatui::widgets::ScrollbarState;
-use std::fmt;
+use serde::{Deserialize, Serialize};
+use std::{fmt, fs};
+
+const DATA_FILE: &str = "character_sheet.toml";
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BallType {
@@ -30,6 +33,8 @@ pub enum FocusedSection {
     WhiteBalls,
     RedBalls,
     DrawInput,
+    RandomMode,
+    ForcedFour,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +60,24 @@ impl DrawHistory {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HoneycombNode {
+    pub text: String,
+    #[serde(skip)]
+    pub x: i16,
+    #[serde(skip)]
+    pub y: i16,
+    #[serde(skip)]
+    pub width: u16,
+    #[serde(skip)]
+    pub height: u16,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct HoneycombData {
+    nodes: Vec<String>,
+}
+
 pub struct App {
     pub white_balls: usize,
     pub red_balls: usize,
@@ -75,11 +98,24 @@ pub struct App {
     pub white_balls_area: Rect,
     pub red_balls_area: Rect,
     pub draw_input_area: Rect,
-    // Graph data
+    pub random_mode_area: Rect,
+    pub forced_four_area: Rect,
+    // Honeycomb grid
+    pub honeycomb_nodes: Vec<HoneycombNode>,
+    pub selected_node: Option<usize>,
+    pub editing_node: bool,
+    pub node_edit_buffer: String,
+    pub graph_area: Rect, // memorizzo area grafo per rendering
+    pub v_scroll_graph: usize,
+    pub v_scroll_graph_state: ScrollbarState,
+    // New modes
+    pub random_mode: bool,
+    pub forced_four_mode: bool,
 }
 
 impl App {
     pub fn new() -> App {
+        let honeycomb_nodes = Self::load_honeycomb_data();
         App {
             white_balls: 0,
             red_balls: 0,
@@ -100,8 +136,207 @@ impl App {
             white_balls_area: Rect::default(),
             red_balls_area: Rect::default(),
             draw_input_area: Rect::default(),
-            // Graph data
+            random_mode_area: Rect::default(),
+            forced_four_area: Rect::default(),
+            // Honeycomb grid
+            honeycomb_nodes,
+            selected_node: None,
+            editing_node: false,
+            node_edit_buffer: String::new(),
+            graph_area: Rect::default(), // memorizzo area grafo per rendering
+            v_scroll_graph: 0,
+            v_scroll_graph_state: ScrollbarState::default(),
+            // New mode
+            random_mode: false,
+            forced_four_mode: false,
         }
+    }
+
+    fn load_honeycomb_data() -> Vec<HoneycombNode> {
+        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
+            if let Ok(data) = toml::from_str::<HoneycombData>(&contents) {
+                return Self::create_honeycomb_layout_with_data(data.nodes);
+            }
+        }
+        Self::create_honeycomb_layout()
+    }
+
+    fn save_honeycomb_data(&self) {
+        let data = HoneycombData {
+            nodes: self
+                .honeycomb_nodes
+                .iter()
+                .map(|n| n.text.clone())
+                .collect(),
+        };
+
+        if let Ok(toml_string) = toml::to_string_pretty(&data) {
+            let _ = fs::write(DATA_FILE, toml_string);
+        }
+    }
+
+    fn create_honeycomb_layout() -> Vec<HoneycombNode> {
+        let texts = vec![String::new(); 19];
+        Self::create_honeycomb_layout_with_data(texts)
+    }
+
+    fn create_honeycomb_layout_with_data(texts: Vec<String>) -> Vec<HoneycombNode> {
+        let mut nodes = Vec::new();
+        let node_width = 12;
+        let node_height = 6;
+        let spacing_x = 0;
+        let spacing_y = 0;
+        let total_width = node_width + spacing_x;
+        let total_height = node_height + spacing_y;
+
+        //            /‾‾‾\            //              |‾‾‾‾|
+        //       /‾‾‾\\___//‾‾‾\       //        |‾‾‾‾||____||‾‾‾‾|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/  //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/  //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/  //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //       \___//‾‾‾\\___/       //        |____||‾‾‾‾||____|
+        //            \___/            //              |____|
+
+        // positions: (x, y)
+        // let positions = [
+        //     // Row 0: 1 node - top
+        //     (0, 3),
+        //     // Row 1: 3 nodes
+        //     (-1, 2),
+        //     (0, 2),
+        //     (1, 2),
+        //     //Row 2: 5 nodes
+        //     (-2, 1),
+        //     (-1, 1),
+        //     (0, 1),
+        //     (1, 1),
+        //     (2, 1),
+        //     // Core: 1 node
+        //     (0,0),
+        //     // Row 3: 5 nodes
+        //     (-2, -1),
+        //     (-1, -1),
+        //     (0, -1),
+        //     (1, -1),
+        //     (2, -1),
+        //     // Row 4: 3 nodes
+        //     (-1, -2),
+        //     (0, -2),
+        //     (1, -2),
+        //     // Row 5: 1 node - bottom
+        //     (0, -3)
+        // ];
+        let positions = [
+            // top cell
+            (0, 4),
+            // top row
+            (-1, 3),
+            (1, 3),
+            // upper row
+            (-2, 2),
+            (0, 2),
+            (2, 2),
+            // mid up row
+            (-1, 1),
+            (1, 1),
+            // central row
+            (-2, 0),
+            (0, 0),
+            (2, 0),
+            // mid down row
+            (-1, -1),
+            (1, -1),
+            // lower row
+            (-2, -2),
+            (0, -2),
+            (2, -2),
+            // bottom row
+            (-1, -3),
+            (1, -3),
+            // bottom cell
+            (0, -4),
+        ];
+
+        for (i, &(col, row)) in positions.iter().enumerate() {
+            let text = if i < texts.len() {
+                texts[i].clone()
+            } else {
+                String::new()
+            };
+
+            nodes.push(HoneycombNode {
+                text,
+                x: col * total_width as i16,
+                y: row * total_height as i16,
+                width: node_width,
+                height: node_height,
+            });
+        }
+
+        nodes
+    }
+
+    pub fn handle_node_click(&mut self, x: u16, y: u16, graph_area: &Rect) {
+        if self.current_tab != 1 || self.editing_node {
+            return;
+        }
+
+        let inner_area = Rect {
+            x: graph_area.x + 1,
+            y: graph_area.y + 1,
+            width: graph_area.width.saturating_sub(2),
+            height: graph_area.height.saturating_sub(2),
+        };
+
+        // Check if area is too small
+        if inner_area.width < 30 || inner_area.height < 20 {
+            return;
+        }
+
+        // Calculate center offset
+        let center_x = inner_area.x + inner_area.width / 2;
+        let center_y = inner_area.y + inner_area.height / 2;
+
+        for (i, node) in self.honeycomb_nodes.iter().enumerate() {
+            let node_x_calc = center_x as i32 + node.x as i32;
+            let node_y_calc = center_y as i32 + node.y as i32;
+
+            // Skip if node would be outside bounds
+            if node_x_calc < inner_area.x as i32
+                || node_y_calc < inner_area.y as i32
+                || node_x_calc + node.width as i32 > (inner_area.x + inner_area.width) as i32
+                || node_y_calc + node.height as i32 > (inner_area.y + inner_area.height) as i32
+            {
+                continue;
+            }
+
+            let node_x = node_x_calc as u16;
+            let node_y = node_y_calc as u16;
+
+            if x >= node_x && x < node_x + node.width && y >= node_y && y < node_y + node.height {
+                self.selected_node = Some(i);
+                return;
+            }
+        }
+    }
+
+    pub fn start_node_editing(&mut self) {
+        if let Some(idx) = self.selected_node {
+            self.editing_node = true;
+            self.node_edit_buffer = self.honeycomb_nodes[idx].text.clone();
+        }
+    }
+
+    pub fn finish_node_editing(&mut self) {
+        if let Some(idx) = self.selected_node {
+            self.honeycomb_nodes[idx].text = self.node_edit_buffer.clone();
+            self.save_honeycomb_data();
+        }
+        self.editing_node = false;
+        self.node_edit_buffer.clear();
     }
 
     pub fn reset(&mut self) {
@@ -117,11 +352,23 @@ impl App {
 
     pub fn create_pool(&mut self) {
         self.pool.clear();
-        for _ in 0..self.white_balls {
-            self.pool.push(BallType::White);
-        }
-        for _ in 0..self.red_balls {
-            self.pool.push(BallType::Red);
+        if self.random_mode {
+            // Random mode: replace white balls with random mix of red and white
+            for _ in 0..self.white_balls {
+                if rand::random() {
+                    self.pool.push(BallType::White);
+                } else {
+                    self.pool.push(BallType::Red);
+                }
+            }
+        } else {
+            // Normal mode
+            for _ in 0..self.white_balls {
+                self.pool.push(BallType::White);
+            }
+            for _ in 0..self.red_balls {
+                self.pool.push(BallType::Red);
+            }
         }
     }
 
@@ -200,6 +447,9 @@ impl App {
         // Calculate total content height (approximately 13 lines per entry)
         let content_height = self.history.len() * 13;
         self.vertical_scroll_state = self.vertical_scroll_state.content_length(content_height);
+        // probably shouldn't go here. but whatever.
+        // arbitrary value = 75
+        self.v_scroll_graph_state = self.v_scroll_graph_state.content_length(75);
     }
 
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) {
@@ -219,8 +469,17 @@ impl App {
                 self.focused_section = FocusedSection::RedBalls;
             } else if is_inside(x, y, &self.draw_input_area) {
                 self.focused_section = FocusedSection::DrawInput;
-                if !self.first_draw_complete {
-                    self.popup = PopupType::ConfirmDraw;
+                // if !self.first_draw_complete {
+                //     self.popup = PopupType::ConfirmDraw;
+                // }
+            } else if is_inside(x, y, &self.random_mode_area) {
+                self.random_mode = !self.random_mode;
+            } else if is_inside(x, y, &self.forced_four_area) {
+                self.forced_four_mode = !self.forced_four_mode;
+                if self.forced_four_mode {
+                    self.draw_count = 4;
+                } else {
+                    self.draw_count = 1;
                 }
             }
         }

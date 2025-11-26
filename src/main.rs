@@ -52,6 +52,23 @@ fn run_app<B: ratatui::backend::Backend>(
             // Controlla se evento e' un KeyDown non un KeyRelease
             Event::Key(key) => {
                 if key.kind == KeyEventKind::Press {
+                    if app.editing_node {
+                        match key.code {
+                            KeyCode::Esc => {
+                                app.finish_node_editing();
+                            }
+                            KeyCode::Char(c) => {
+                                if app.node_edit_buffer.len() < 25 {
+                                    app.node_edit_buffer.push(c);
+                                }
+                            }
+                            KeyCode::Backspace => {
+                                app.node_edit_buffer.pop();
+                            }
+                            _ => {}
+                        }
+                        continue;
+                    }
                     if app.popup != PopupType::None {
                         match key.code {
                             KeyCode::Enter => {
@@ -83,7 +100,9 @@ fn run_app<B: ratatui::backend::Backend>(
                                 if app.current_tab == 0 {
                                     app.focused_section = match app.focused_section {
                                         FocusedSection::WhiteBalls => FocusedSection::RedBalls,
-                                        FocusedSection::RedBalls => FocusedSection::DrawInput,
+                                        FocusedSection::RedBalls => FocusedSection::RandomMode,
+                                        FocusedSection::RandomMode => FocusedSection::ForcedFour,
+                                        FocusedSection::ForcedFour => FocusedSection::DrawInput,
                                         FocusedSection::DrawInput => FocusedSection::WhiteBalls,
                                     };
                                 }
@@ -93,7 +112,9 @@ fn run_app<B: ratatui::backend::Backend>(
                                     app.focused_section = match app.focused_section {
                                         FocusedSection::WhiteBalls => FocusedSection::DrawInput,
                                         FocusedSection::RedBalls => FocusedSection::WhiteBalls,
-                                        FocusedSection::DrawInput => FocusedSection::RedBalls,
+                                        FocusedSection::RandomMode => FocusedSection::RedBalls,
+                                        FocusedSection::ForcedFour => FocusedSection::RandomMode,
+                                        FocusedSection::DrawInput => FocusedSection::ForcedFour,
                                     };
                                 }
                             }
@@ -101,12 +122,12 @@ fn run_app<B: ratatui::backend::Backend>(
                                 if app.current_tab == 0 {
                                     match app.focused_section {
                                         FocusedSection::WhiteBalls => {
-                                            if app.white_balls < 19 {
+                                            if app.white_balls < 10 {
                                                 app.white_balls += 1;
                                             }
                                         }
                                         FocusedSection::RedBalls => {
-                                            if app.red_balls < 6 {
+                                            if app.red_balls < 10 {
                                                 app.red_balls += 1;
                                             }
                                         }
@@ -115,12 +136,19 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 app.draw_count += 1;
                                             }
                                         }
+                                        _ => {}
                                     }
                                 } else if app.current_tab == 3 {
                                     if app.vertical_scroll > 0 {
                                         app.vertical_scroll -= 1;
                                         app.vertical_scroll_state =
                                             app.vertical_scroll_state.position(app.vertical_scroll);
+                                    }
+                                } else if app.current_tab == 1 {
+                                    if app.v_scroll_graph > 0 {
+                                        app.v_scroll_graph -= 1;
+                                        app.v_scroll_graph_state =
+                                            app.v_scroll_graph_state.position(app.v_scroll_graph);
                                     }
                                 }
                             }
@@ -142,6 +170,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 app.draw_count -= 1;
                                             }
                                         }
+                                        _ => {}
                                     }
                                 } else if app.current_tab == 3 {
                                     let max_scroll = (app.history.len() * 13).saturating_sub(10);
@@ -150,14 +179,34 @@ fn run_app<B: ratatui::backend::Backend>(
                                         app.vertical_scroll_state =
                                             app.vertical_scroll_state.position(app.vertical_scroll);
                                     }
+                                } else if app.current_tab == 1 {
+                                    let max_scroll = (app.v_scroll_graph).saturating_sub(10);
+                                    if app.v_scroll_graph < max_scroll {
+                                        app.v_scroll_graph += 1;
+                                        app.v_scroll_graph_state =
+                                            app.v_scroll_graph_state.position(app.v_scroll_graph);
+                                    }
                                 }
                             }
                             KeyCode::Enter => {
-                                if app.current_tab == 0
-                                    && app.focused_section == FocusedSection::DrawInput
-                                    && !app.first_draw_complete
-                                {
-                                    app.popup = PopupType::ConfirmDraw;
+                                if app.current_tab == 0 {
+                                    if app.focused_section == FocusedSection::DrawInput
+                                        && !app.first_draw_complete
+                                    {
+                                        app.popup = PopupType::ConfirmDraw;
+                                    } else if app.focused_section == FocusedSection::ForcedFour {
+                                        app.forced_four_mode = !app.forced_four_mode;
+                                        if app.forced_four_mode {
+                                            app.draw_count = 4;
+                                        } else {
+                                            app.draw_count = 1;
+                                        }
+                                    } else if app.focused_section == FocusedSection::RandomMode {
+                                        app.random_mode = !app.random_mode;
+                                    }
+                                }
+                                if app.current_tab == 1 && app.selected_node.is_some() {
+                                    app.start_node_editing();
                                 }
                             }
                             _ => {}
@@ -173,6 +222,10 @@ fn run_app<B: ratatui::backend::Backend>(
                 match mouse.kind {
                     MouseEventKind::Down(MouseButton::Left) => {
                         app.handle_mouse_click(mouse.column, mouse.row);
+                        // Also check for node clicks in graph tab
+                        if app.current_tab == 1 {
+                            app.handle_node_click(mouse.column, mouse.row, &app.graph_area.clone());
+                        }
                     }
                     _ => {}
                 }
