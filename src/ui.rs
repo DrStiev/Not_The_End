@@ -19,9 +19,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     // Tabs
     let tab_titles = vec![
         "Fai una Prova",
-        "Scheda Personaggio",
-        "Scheda Personaggio 2",
-        "Log Prove Effettuate",
+        "Scheda pt.1",
+        "Scheda pt.2",
+        "Logs Prove",
     ];
     let tabs = Tabs::new(tab_titles.clone())
         .block(

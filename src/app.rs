@@ -243,11 +243,14 @@ impl App {
                 .collect(),
         };
 
-        if let Ok(toml_string_1) = toml::to_string_pretty(&data) {
-            if let Ok(toml_string_2) = toml::to_string_pretty(&self.list_data) {
-                let _ = fs::write(DATA_FILE, toml_string_1 + &toml_string_2);
-            }
+        let mut string = String::new();
+        if let Ok(toml_string) = toml::to_string_pretty(&data) {
+            string.push_str(&toml_string);
         }
+        if let Ok(toml_string) = toml::to_string_pretty(&self.list_data) {
+            string.push_str(&toml_string);
+        }
+        let _ = fs::write(DATA_FILE, string);
     }
 
     fn create_honeycomb_layout() -> Vec<HoneycombNode> {
