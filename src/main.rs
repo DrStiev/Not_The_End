@@ -168,25 +168,16 @@ fn run_app<B: ratatui::backend::Backend>(
                                         app.vertical_scroll_state =
                                             app.vertical_scroll_state.position(app.vertical_scroll);
                                     }
-                                } else if app.current_tab == 1 {
-                                    if app.v_scroll_graph > 0 {
-                                        app.v_scroll_graph -= 1;
-                                        app.v_scroll_graph_state =
-                                            app.v_scroll_graph_state.position(app.v_scroll_graph);
-                                    }
                                 } else if app.current_tab == 2 {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            1 => {
+                                            1 | 2 => {
                                                 if idx > 0 {
                                                     app.selected_list_item =
                                                         Some((section, idx - 1));
-                                                }
-                                            }
-                                            2 => {
-                                                if idx > 0 {
+                                                } else {
                                                     app.selected_list_item =
-                                                        Some((section, idx - 1));
+                                                        Some((section, 4 - idx));
                                                 }
                                             }
                                             _ => {}
@@ -221,27 +212,12 @@ fn run_app<B: ratatui::backend::Backend>(
                                         app.vertical_scroll_state =
                                             app.vertical_scroll_state.position(app.vertical_scroll);
                                     }
-                                } else if app.current_tab == 1 {
-                                    let max_scroll = (app.v_scroll_graph).saturating_sub(10);
-                                    if app.v_scroll_graph < max_scroll {
-                                        app.v_scroll_graph += 1;
-                                        app.v_scroll_graph_state =
-                                            app.v_scroll_graph_state.position(app.v_scroll_graph);
-                                    }
                                 } else if app.current_tab == 2 {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            1 => {
-                                                if idx < 4 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx + 1));
-                                                }
-                                            }
-                                            2 => {
-                                                if idx < 4 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx + 1));
-                                                }
+                                            1 | 2 => {
+                                                app.selected_list_item =
+                                                    Some((section, (idx + 1) % 5));
                                             }
                                             _ => {}
                                         }

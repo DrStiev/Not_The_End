@@ -37,13 +37,6 @@ pub enum FocusedSection {
     ForcedFour,
 }
 
-// #[derive(Debug, PartialEq)]
-// pub enum CharacterSheetSection {
-//     Misfortunes,
-//     Resources,
-//     Lections,
-// }
-
 #[derive(Debug, Clone)]
 pub struct DrawHistory {
     pub white_balls: usize,
@@ -138,7 +131,6 @@ pub struct App {
     pub draw_input_area: Rect,
     pub random_mode_area: Rect,
     pub forced_four_area: Rect,
-    // pub character_sheet_section: CharacterSheetSection,
     pub misfortunes_area: [Rect; 4],
     pub resources_area: [Rect; 2],
     pub lections_area: [Rect; 3],
@@ -148,8 +140,6 @@ pub struct App {
     pub editing_node: bool,
     pub node_edit_buffer: String,
     pub graph_area: Rect, // memorizzo area grafo per rendering
-    pub v_scroll_graph: usize,
-    pub v_scroll_graph_state: ScrollbarState,
     // New modes
     pub random_mode: bool,
     pub forced_four_mode: bool,
@@ -187,7 +177,6 @@ impl App {
             draw_input_area: Rect::default(),
             random_mode_area: Rect::default(),
             forced_four_area: Rect::default(),
-            // character_sheet_section: CharacterSheetSection::Misfortunes,
             misfortunes_area: [
                 Rect::default(),
                 Rect::default(),
@@ -202,8 +191,6 @@ impl App {
             editing_node: false,
             node_edit_buffer: String::new(),
             graph_area: Rect::default(), // memorizzo area grafo per rendering
-            v_scroll_graph: 0,
-            v_scroll_graph_state: ScrollbarState::default(),
             // New mode
             random_mode: false,
             forced_four_mode: false,
@@ -233,7 +220,6 @@ impl App {
         ListData::default()
     }
 
-    // TODO: not the best way to do it but good for now
     fn save_data(&self) {
         let data = HoneycombData {
             nodes: self
@@ -260,82 +246,35 @@ impl App {
 
     fn create_honeycomb_layout_with_data(texts: Vec<String>) -> Vec<HoneycombNode> {
         let mut nodes = Vec::new();
-        let node_width = 12;
-        let node_height = 6;
+        let node_width = 12; // 12
+        let node_height = 6; // 6
         let spacing_x = 0;
         let spacing_y = 0;
         let total_width = node_width + spacing_x;
         let total_height = node_height + spacing_y;
 
-        //            /‾‾‾\            //              |‾‾‾‾|
-        //       /‾‾‾\\___//‾‾‾\       //        |‾‾‾‾||____||‾‾‾‾|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/  //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/  //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/  //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //       \___//‾‾‾\\___/       //        |____||‾‾‾‾||____|
-        //            \___/            //              |____|
-
-        // positions: (x, y)
-        // let positions = [
-        //     // Row 0: 1 node - top
-        //     (0, 3),
-        //     // Row 1: 3 nodes
-        //     (-1, 2),
-        //     (0, 2),
-        //     (1, 2),
-        //     //Row 2: 5 nodes
-        //     (-2, 1),
-        //     (-1, 1),
-        //     (0, 1),
-        //     (1, 1),
-        //     (2, 1),
-        //     // Core: 1 node
-        //     (0,0),
-        //     // Row 3: 5 nodes
-        //     (-2, -1),
-        //     (-1, -1),
-        //     (0, -1),
-        //     (1, -1),
-        //     (2, -1),
-        //     // Row 4: 3 nodes
-        //     (-1, -2),
-        //     (0, -2),
-        //     (1, -2),
-        //     // Row 5: 1 node - bottom
-        //     (0, -3)
-        // ];
+        //            /‾‾‾\             5 //              |‾‾‾‾|
+        //       /‾‾‾\\___//‾‾‾\        4 //        |‾‾‾‾||____||‾‾‾‾|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   3 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/   2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/   0 //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  -1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/  -2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //       \___//‾‾‾\\___/       -3 //        |____||‾‾‾‾||____|
+        //            \___/            -4 //              |____|
+                                          //    -2    -1     0     1     2
         let positions = [
-            // top cell
-            (0, 4),
-            // top row
-            (-1, 3),
-            (1, 3),
-            // upper row
-            (-2, 2),
-            (0, 2),
-            (2, 2),
-            // mid up row
-            (-1, 1),
-            (1, 1),
-            // central row
-            (-2, 0),
-            (0, 0),
-            (2, 0),
-            // mid down row
-            (-1, -1),
-            (1, -1),
-            // lower row
-            (-2, -2),
-            (0, -2),
-            (2, -2),
-            // bottom row
-            (-1, -3),
-            (1, -3),
-            // bottom cell
-            (0, -4),
+            // column -2
+            (-2,-2),(-2,0),(-2,2), // 0,1,2
+            // column -1
+            (-1,-3),(-1,-1),(-1,1),(-1,3), // 3,4,5,6
+            // column 0
+            (0,-4),(0,-2),(0,0),(0,2),(0,4), // 7,8,9,10,11
+            // column 1
+            (1,-3),(1,-1),(1,1),(1,3), // 12,13,14,15
+            // column 2
+            (2,-2),(2,0),(2,2), // 16,17,18
         ];
 
         for (i, &(col, row)) in positions.iter().enumerate() {
@@ -348,7 +287,7 @@ impl App {
             nodes.push(HoneycombNode {
                 text,
                 x: col * total_width as i16,
-                y: row * total_height as i16,
+                y: (row * total_height as i16) / 2,
                 width: node_width,
                 height: node_height,
             });
@@ -553,9 +492,6 @@ impl App {
         // Calculate total content height (approximately 13 lines per entry)
         let content_height = self.history.len() * 13;
         self.vertical_scroll_state = self.vertical_scroll_state.content_length(content_height);
-        // probably shouldn't go here. but whatever.
-        // arbitrary value = 75
-        self.v_scroll_graph_state = self.v_scroll_graph_state.content_length(75);
     }
 
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) {

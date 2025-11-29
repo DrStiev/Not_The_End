@@ -17,12 +17,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(f.area());
 
     // Tabs
-    let tab_titles = vec![
-        "Fai una Prova",
-        "Scheda pt.1",
-        "Scheda pt.2",
-        "Logs Prove",
-    ];
+    let tab_titles = vec!["Fai una Prova", "Scheda pt.1", "Scheda pt.2", "Logs Prove"];
     let tabs = Tabs::new(tab_titles.clone())
         .block(
             Block::default()
@@ -298,7 +293,7 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     app.graph_area = area;
 
     // Check if area is too small
-    if inner_area.width < 30 || inner_area.height < 20 {
+    if inner_area.width < 30 || inner_area.height < 15 {
         let warning =
             Paragraph::new("Finestra troppo piccola!\nIngrandire per visualizzare la scheda.")
                 .alignment(Alignment::Center)
@@ -364,13 +359,6 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
         f.render_widget(paragraph, node_rect);
     }
-
-    // Render scrollbar
-    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-        .begin_symbol(Some("↑"))
-        .end_symbol(Some("↓"));
-
-    f.render_stateful_widget(scrollbar, area, &mut app.v_scroll_graph_state);
 }
 
 fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
@@ -378,8 +366,8 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(8),  // Misfortunes
-            Constraint::Length(12), // Resources
-            Constraint::Min(0),     // Lessons
+            Constraint::Length(8), // Resources
+            Constraint::Min(8),     // Lessons
         ])
         .split(area);
 
