@@ -90,15 +90,20 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     let left_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([
+            Constraint::Percentage(20), // white balls
+            Constraint::Percentage(20), // red balls
+            Constraint::Percentage(10), // reset
+            Constraint::Percentage(50), // text
+        ])
         .split(main_layout[0]);
 
     let right_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(30),
-            Constraint::Percentage(20),
+            Constraint::Percentage(30), // draw balls
+            Constraint::Percentage(20), // status
+            Constraint::Percentage(50), // text
         ])
         .split(main_layout[1]);
 
@@ -277,7 +282,196 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .block(reset_block)
         .alignment(Alignment::Center);
 
-    f.render_widget(reset_paragraph, right_layout[2]);
+    f.render_widget(reset_paragraph, left_layout[2]);
+
+    // text area left
+    let text_block = Block::default()
+        .title(" Ricorda... ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+
+    let text = vec![
+        Line::from(vec![
+            Span::styled("Affronti ", Style::default()),
+            Span::styled("una ", Style::default()),
+            Span::styled("PROVA", Style::default().fg(Color::LightYellow)),
+            Span::styled(" quando ", Style::default()),
+            Span::styled("ciò ", Style::default()),
+            Span::styled("che  ", Style::default()),
+            Span::styled("stai ", Style::default()),
+            Span::styled("tentando ", Style::default()),
+            Span::styled("di ", Style::default()),
+            Span::styled("fare ", Style::default()),
+            Span::styled("potrebbe ", Style::default()),
+            Span::styled("avere ", Style::default()),
+            Span::styled("conseguenze ", Style::default()),
+            Span::styled("NEGATIVE", Style::default()),
+            Span::styled(".", Style::default()),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Spendi ", Style::default()),
+            Span::styled("il ", Style::default()),
+            Span::styled("primo ", Style::default()),
+            Span::styled("●", Style::default().fg(Color::White)),
+            Span::styled(" per ", Style::default()),
+            Span::styled("SUPERARE", Style::default().fg(Color::LightYellow)),
+            Span::styled(" la ", Style::default()),
+            Span::styled("PROVA", Style::default()),
+            Span::styled(" e ", Style::default()),
+            Span::styled("i ", Style::default()),
+            Span::styled("restanti ", Style::default()),
+            Span::styled("per ", Style::default()),
+            Span::styled("MIGLIORARNE", Style::default().fg(Color::LightYellow)),
+            Span::styled(" l'esito.", Style::default()),
+        ]),
+                Line::from(""),
+        Line::from(vec![
+            Span::styled("Spendi ", Style::default()),
+            Span::styled("1 ", Style::default()),
+            Span::styled("●", Style::default().fg(Color::Red)),
+            Span::styled(" per ", Style::default()),
+            Span::styled("accumulare ", Style::default()),
+            Span::styled("ADRENALINA", Style::default().fg(Color::LightYellow)),
+            Span::styled(" o ", Style::default()),
+            Span::styled("CONFUSIONE", Style::default().fg(Color::LightYellow)),
+            Span::styled(".", Style::default()),
+        ]),
+        Line::from(vec![
+            Span::styled("Spendi ", Style::default()),
+            Span::styled("1 ", Style::default()),
+            Span::styled("●", Style::default().fg(Color::Red)),
+            Span::styled(" come ", Style::default()),
+            Span::styled("SVENTURA", Style::default().fg(Color::LightYellow)),
+            Span::styled(" per ", Style::default()),
+            Span::styled("fartene ", Style::default()),
+            Span::styled("infliggere ", Style::default()),
+            Span::styled("una ", Style::default()),
+            Span::styled("dal ", Style::default()),
+            Span::styled("NARRATORE.", Style::default()),
+        ]),
+        Line::from(vec![
+            Span::styled("Spendi ", Style::default()),
+            Span::styled("1 ", Style::default()),
+            Span::styled("●", Style::default().fg(Color::Red)),
+            Span::styled(" come ", Style::default()),
+            Span::styled("COMPLICAZIONE", Style::default().fg(Color::LightYellow)),
+            Span::styled(" per ", Style::default()),
+            Span::styled("far ", Style::default()),
+            Span::styled("raccontare ", Style::default()),
+            Span::styled("dal ", Style::default()),
+            Span::styled("NARRATORE ", Style::default()),
+            Span::styled("un ", Style::default()),
+            Span::styled("esito ", Style::default()),
+            Span::styled("IMPREVISTO ", Style::default()),
+            Span::styled("della ", Style::default()),
+            Span::styled("SCENA. ", Style::default()),
+        ]),
+    ];
+
+    let text_paragraph = Paragraph::new(text)
+        .block(text_block)
+        .alignment(Alignment::Left)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(text_paragraph, left_layout[3]);
+
+    // text area right
+    let text_block = Block::default()
+        .title(" Ricorda... ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
+
+    let text = vec![
+        Line::from(vec![
+            Span::styled("RISCHI", Style::default().fg(Color::LightYellow)),
+            Span::styled(" quando ", Style::default()),
+            Span::styled("vuoi ", Style::default()),
+            Span::styled("ESTRARRE ", Style::default()),
+            Span::styled("altri ", Style::default()),
+            Span::styled("TOKEN ", Style::default()),
+            Span::styled("oltre ", Style::default()),
+            Span::styled("a ", Style::default()),
+            Span::styled("quelli ", Style::default()),
+            Span::styled("che ", Style::default()),
+            Span::styled("hai ", Style::default()),
+            Span::styled("già ", Style::default()),
+            Span::styled("estratto ", Style::default()),
+            Span::styled("durante ", Style::default()),
+            Span::styled("una ", Style::default()),
+            Span::styled("PROVA", Style::default()),
+            Span::styled(".", Style::default()),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Affronti ", Style::default()),
+            Span::styled("una ", Style::default()),
+            Span::styled("PROVA CRUCIALE", Style::default().fg(Color::LightYellow)),
+            Span::styled(" quando ", Style::default()),
+            Span::styled("la ", Style::default()),
+            Span::styled("consideri ", Style::default()),
+            Span::styled("DETERMINANTE ", Style::default()),
+            Span::styled("per ", Style::default()),
+            Span::styled("lo ", Style::default()),
+            Span::styled("sviluppo ", Style::default()),
+            Span::styled("dell' ", Style::default()),
+            Span::styled("eroe. ", Style::default()),
+        ]),
+        Line::from(vec![
+            Span::styled("Dichiara ", Style::default()),
+            Span::styled("la ", Style::default()),
+            Span::styled("PROVA CRUCIALE", Style::default().fg(Color::LightYellow)),
+            Span::styled(" prima ", Style::default()),
+            Span::styled("di ", Style::default()),
+            Span::styled("ESTRARRE ", Style::default().fg(Color::LightYellow)),
+            Span::styled(".", Style::default()),
+        ]),
+        Line::from(vec![
+            Span::styled("Affronta ", Style::default()),
+            Span::styled("la ", Style::default()),
+            Span::styled("PROVA", Style::default().fg(Color::LightYellow)),
+            Span::styled(" normalmente.", Style::default()),
+        ]),
+        Line::from(vec![
+            Span::styled("Scegli ", Style::default()),
+            Span::styled("un ", Style::default()),
+            Span::styled("risultato ", Style::default()),
+            Span::styled("in ", Style::default()),
+            Span::styled("base ", Style::default()),
+            Span::styled("all' ", Style::default()),
+            Span::styled("esito ", Style::default()),
+            Span::styled("della ", Style::default()),
+            Span::styled("prova:", Style::default()),     
+        ]),  
+        Line::from(vec![
+            Span::styled("Guadagni ", Style::default()),
+            Span::styled("o ", Style::default()),
+            Span::styled("cambi ", Style::default()),
+            Span::styled("un ", Style::default()),
+            Span::styled("TRATTO", Style::default().fg(Color::LightYellow)),
+            Span::styled(".", Style::default()),     
+        ]),
+        Line::from(vec![
+            Span::styled("Impari ", Style::default()),
+            Span::styled("una ", Style::default()),
+            Span::styled("LEZIONE", Style::default().fg(Color::LightYellow)),
+            Span::styled(".", Style::default()),     
+        ]),Line::from(vec![
+            Span::styled("Vieni ", Style::default()),
+            Span::styled("segnato ", Style::default()),
+            Span::styled("da ", Style::default()),
+            Span::styled("una ", Style::default()),
+            Span::styled("CICATRICE", Style::default().fg(Color::LightYellow)),
+            Span::styled(".", Style::default()),     
+        ]),                
+    ];
+
+    let text_paragraph = Paragraph::new(text)
+        .block(text_block)
+        .alignment(Alignment::Left)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(text_paragraph, right_layout[2]);
 }
 
 fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
