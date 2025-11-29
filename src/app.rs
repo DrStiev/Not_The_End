@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use rand::prelude::IndexedRandom;
 use ratatui::prelude::Rect;
 use ratatui::widgets::ScrollbarState;
@@ -39,11 +40,14 @@ pub enum FocusedSection {
 
 #[derive(Debug, Clone)]
 pub struct DrawHistory {
+    pub time: String,
     pub white_balls: usize,
     pub red_balls: usize,
     pub first_draw: Vec<BallType>,
     pub risked: bool,
     pub risk_draw: Vec<BallType>,
+    pub confused: bool,
+    pub adrenalined: bool,
 }
 
 impl DrawHistory {
@@ -263,18 +267,32 @@ impl App {
         //  \___//‾‾‾\\___//‾‾‾\\___/  -2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
         //       \___//‾‾‾\\___/       -3 //        |____||‾‾‾‾||____|
         //            \___/            -4 //              |____|
-                                          //    -2    -1     0     1     2
+        //    -2    -1     0     1     2
         let positions = [
             // column -2
-            (-2,-2),(-2,0),(-2,2), // 0,1,2
+            (-2, -2),
+            (-2, 0),
+            (-2, 2), // 0,1,2
             // column -1
-            (-1,-3),(-1,-1),(-1,1),(-1,3), // 3,4,5,6
+            (-1, -3),
+            (-1, -1),
+            (-1, 1),
+            (-1, 3), // 3,4,5,6
             // column 0
-            (0,-4),(0,-2),(0,0),(0,2),(0,4), // 7,8,9,10,11
+            (0, -4),
+            (0, -2),
+            (0, 0),
+            (0, 2),
+            (0, 4), // 7,8,9,10,11
             // column 1
-            (1,-3),(1,-1),(1,1),(1,3), // 12,13,14,15
+            (1, -3),
+            (1, -1),
+            (1, 1),
+            (1, 3), // 12,13,14,15
             // column 2
-            (2,-2),(2,0),(2,2), // 16,17,18
+            (2, -2),
+            (2, 0),
+            (2, 2), // 16,17,18
         ];
 
         for (i, &(col, row)) in positions.iter().enumerate() {
@@ -393,6 +411,8 @@ impl App {
         self.pool.clear();
         self.popup = PopupType::None;
         self.current_first_draw.clear();
+        self.forced_four_mode = false;
+        self.random_mode = false;
     }
 
     pub fn create_pool(&mut self) {
@@ -443,13 +463,17 @@ impl App {
         if self.drawn_balls.len() < 5 {
             self.popup = PopupType::ConfirmRisk;
         } else {
+            let local: DateTime<Local> = Local::now();
             // Aggiungi alla cronologia senza rischio
             self.history.push(DrawHistory {
+                time: local.format("%A %e %B %Y, %T").to_string(),
                 white_balls: self.white_balls,
                 red_balls: self.red_balls,
                 first_draw: self.current_first_draw.clone(),
                 risked: false,
                 risk_draw: Vec::new(),
+                confused: self.random_mode,
+                adrenalined: self.forced_four_mode,
             });
             self.update_vertical_scroll_state();
             self.popup = PopupType::None;
@@ -464,26 +488,34 @@ impl App {
             risk_balls = additional.clone();
             self.drawn_balls.extend(additional);
         }
+        let local: DateTime<Local> = Local::now();
         // Aggiungi alla cronologia con rischio
         self.history.push(DrawHistory {
+            time: local.format("%A %e %B %Y, %T").to_string(),
             white_balls: self.white_balls,
             red_balls: self.red_balls,
             first_draw: self.current_first_draw.clone(),
             risked: true,
             risk_draw: risk_balls,
+            confused: self.random_mode,
+            adrenalined: self.forced_four_mode,
         });
         self.update_vertical_scroll_state();
         self.popup = PopupType::None;
     }
 
     pub fn cancel_draw(&mut self) {
+        let local: DateTime<Local> = Local::now();
         // Aggiungi alla cronologia senza rischio
         self.history.push(DrawHistory {
+            time: local.format("%A %e %B %Y, %T").to_string(),
             white_balls: self.white_balls,
             red_balls: self.red_balls,
             first_draw: self.current_first_draw.clone(),
             risked: false,
             risk_draw: Vec::new(),
+            confused: self.random_mode,
+            adrenalined: self.forced_four_mode,
         });
         self.update_vertical_scroll_state();
     }

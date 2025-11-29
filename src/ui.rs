@@ -365,9 +365,9 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8),  // Misfortunes
+            Constraint::Length(8), // Misfortunes
             Constraint::Length(8), // Resources
-            Constraint::Min(8),     // Lessons
+            Constraint::Min(8),    // Lessons
         ])
         .split(area);
 
@@ -548,7 +548,7 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     for (i, entry) in app.history.iter().enumerate().rev() {
         lines.push(Line::from(Span::styled(
-            format!("═══ Prova #{} ═══", i + 1),
+            format!("{} - Prova #{}: ", entry.time, i + 1),
             Style::default()
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
@@ -626,6 +626,20 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
                 Span::styled("Rischiato: ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::styled("No", Style::default().fg(Color::Red)),
             ]));
+        }
+
+        if entry.confused {
+            lines.push(Line::from(vec![Span::styled(
+                "Sotto effetto di Confusione",
+                Style::default().add_modifier(Modifier::BOLD),
+            )]));
+        }
+
+        if entry.adrenalined {
+            lines.push(Line::from(vec![Span::styled(
+                "Sotto effetto di Adrenalina",
+                Style::default().add_modifier(Modifier::BOLD),
+            )]));
         }
 
         lines.push(Line::from(""));
