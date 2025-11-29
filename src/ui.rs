@@ -325,7 +325,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("MIGLIORARNE", Style::default().fg(Color::LightYellow)),
             Span::styled(" l'esito.", Style::default()),
         ]),
-                Line::from(""),
+        Line::from(""),
         Line::from(vec![
             Span::styled("Spendi ", Style::default()),
             Span::styled("1 ", Style::default()),
@@ -441,29 +441,30 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("all' ", Style::default()),
             Span::styled("esito ", Style::default()),
             Span::styled("della ", Style::default()),
-            Span::styled("prova:", Style::default()),     
-        ]),  
+            Span::styled("prova:", Style::default()),
+        ]),
         Line::from(vec![
             Span::styled("Guadagni ", Style::default()),
             Span::styled("o ", Style::default()),
             Span::styled("cambi ", Style::default()),
             Span::styled("un ", Style::default()),
             Span::styled("TRATTO", Style::default().fg(Color::LightYellow)),
-            Span::styled(".", Style::default()),     
+            Span::styled(".", Style::default()),
         ]),
         Line::from(vec![
             Span::styled("Impari ", Style::default()),
             Span::styled("una ", Style::default()),
             Span::styled("LEZIONE", Style::default().fg(Color::LightYellow)),
-            Span::styled(".", Style::default()),     
-        ]),Line::from(vec![
+            Span::styled(".", Style::default()),
+        ]),
+        Line::from(vec![
             Span::styled("Vieni ", Style::default()),
             Span::styled("segnato ", Style::default()),
             Span::styled("da ", Style::default()),
             Span::styled("una ", Style::default()),
             Span::styled("CICATRICE", Style::default().fg(Color::LightYellow)),
-            Span::styled(".", Style::default()),     
-        ]),                
+            Span::styled(".", Style::default()),
+        ]),
     ];
 
     let text_paragraph = Paragraph::new(text)
@@ -744,7 +745,7 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
         lines.push(Line::from(Span::styled(
             format!("{} - Prova #{}: ", entry.time, i + 1),
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Color::LightYellow)
                 .add_modifier(Modifier::BOLD),
         )));
         lines.push(Line::from(""));
@@ -982,19 +983,20 @@ fn draw_node_edit_popup(f: &mut Frame, app: &App) {
     let area = centered_rect(50, 20, f.area());
 
     let popup_block = Block::default()
-        .title(Line::from("Modifica Hex (Esc per confermare)").alignment(Alignment::Center))
+        .title(Line::from("Modifica (Esc per confermare)").alignment(Alignment::Center))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .style(Style::default().bg(Color::Black).fg(Color::Yellow));
 
     let text = vec![
         Line::from(""),
-        Line::from(Span::styled(
-            &app.node_edit_buffer,
-            Style::default().add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-        Line::from(Span::styled("▌", Style::default().fg(Color::Green))),
+        Line::from(vec![
+            Span::styled(
+                &app.node_edit_buffer,
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("▌", Style::default().fg(Color::Green)),
+        ]),
     ];
 
     let paragraph = Paragraph::new(text)
@@ -1016,12 +1018,13 @@ fn draw_list_edit_popup(f: &mut Frame, app: &App) {
 
     let text = vec![
         Line::from(""),
-        Line::from(Span::styled(
-            &app.list_edit_buffer,
-            Style::default().add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-        Line::from(Span::styled("▌", Style::default().fg(Color::Green))),
+        Line::from(vec![
+            Span::styled(
+                &app.list_edit_buffer,
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("▌", Style::default().fg(Color::Green)),
+        ]),
     ];
 
     let paragraph = Paragraph::new(text)

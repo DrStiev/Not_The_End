@@ -17,6 +17,12 @@ mod ui;
 use crate::ui::ui;
 
 fn main() -> Result<(), io::Error> {
+    // when enablebled raw mode:
+    // Input will not be forwarded to screen
+    // Input will not be processed on enter press
+    // Input will not be line buffered (input sent byte-by-byte to input buffer)
+    // Special keys like backspace and CTRL+C will not be processed by terminal driver
+    // New line character will not be processed therefore println! can’t be used, use write! instead
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -69,7 +75,6 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                         continue;
                     }
-                    // TODO: handle NewLine character as part of input string
                     if app.editing_list_item {
                         match key.code {
                             KeyCode::Esc => {
@@ -79,13 +84,25 @@ fn run_app<B: ratatui::backend::Backend>(
                                 let max_len = match app.selected_list_item {
                                     Some((0, _)) => 120,               // Misfortunes
                                     Some((1, _)) | Some((2, _)) => 50, // Resources
-                                    Some((3, _)) => 250,               // Lessons
+                                    Some((3, _)) => 500,               // Lessons
                                     _ => 50,
                                 };
                                 if app.list_edit_buffer.len() < max_len {
                                     app.list_edit_buffer.push(c);
                                 }
                             }
+                            KeyCode::Enter => {
+                                let max_len = match app.selected_list_item {
+                                    Some((0, _)) => 120,               // Misfortunes
+                                    Some((1, _)) | Some((2, _)) => 50, // Resources
+                                    Some((3, _)) => 500,               // Lessons
+                                    _ => 50,
+                                };
+                                if app.list_edit_buffer.len() < max_len {
+                                    app.list_edit_buffer.push('\n');
+                                }
+                            }
+                            // TODO: handle moving right and left in string with arrows?
                             KeyCode::Backspace => {
                                 app.list_edit_buffer.pop();
                             }
