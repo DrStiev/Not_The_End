@@ -216,6 +216,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled("invece ", Style::default()),
         Span::styled("di ", Style::default()),
         Span::styled("●", Style::default().fg(Color::White)),
+        Span::styled(".", Style::default()),
     ]);
 
     let confusion_paragraph = Paragraph::new(confusion_text)
@@ -252,6 +253,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled(" almeno ", Style::default()),
         Span::styled("4 ", Style::default()),
         Span::styled("○", Style::default()),
+        Span::styled(".", Style::default()),
     ]);
 
     let adrenalin_paragraph = Paragraph::new(adrenalin_text)
@@ -275,7 +277,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
                 .fg(Color::Green)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" per resettare", Style::default()),
+        Span::styled(" per resettare.", Style::default()),
     ]);
 
     let reset_paragraph = Paragraph::new(reset_text)
@@ -498,8 +500,8 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Calculate center of the area
-    let center_x = inner_area.x + inner_area.width / 2;
-    let center_y = inner_area.y + inner_area.height / 2;
+    let center_x = (inner_area.x + inner_area.width) / 2;
+    let center_y = (inner_area.y + inner_area.height) / 2;
 
     // Render each node
     for (i, node) in app.honeycomb_nodes.iter().enumerate() {
@@ -995,7 +997,7 @@ fn draw_node_edit_popup(f: &mut Frame, app: &App) {
                 &app.node_edit_buffer,
                 Style::default().add_modifier(Modifier::BOLD),
             ),
-            Span::styled("▌", Style::default().fg(Color::Green)),
+            Span::styled("▌", Style::default().fg(Color::LightYellow)),
         ]),
     ];
 
@@ -1023,7 +1025,7 @@ fn draw_list_edit_popup(f: &mut Frame, app: &App) {
                 &app.list_edit_buffer,
                 Style::default().add_modifier(Modifier::BOLD),
             ),
-            Span::styled("▌", Style::default().fg(Color::Green)),
+            Span::styled("▌", Style::default().fg(Color::LightYellow)),
         ]),
     ];
 

@@ -152,6 +152,8 @@ pub struct App {
     pub selected_list_item: Option<(usize, usize)>, // (section, index)
     pub editing_list_item: bool,
     pub list_edit_buffer: String,
+    // Position of cursor in the editor area
+    pub cursor_index: usize,
 }
 
 impl App {
@@ -203,7 +205,39 @@ impl App {
             selected_list_item: None,
             editing_list_item: false,
             list_edit_buffer: String::new(),
+            // Position of cursor in the editor area
+            cursor_index: 0,
         }
+    }
+
+    // Returns the byte index based on the character position.
+    //
+    // Since each character in a string can be contain multiple bytes, it's necessary to calculate
+    // the byte index based on the index of the character.
+    fn byte_index(&self, input: String) -> usize {
+        input
+            .char_indices()
+            .map(|(i, _)| i)
+            .nth(self.cursor_index)
+            .unwrap_or(input.len())
+    }
+
+    fn clamp_cursor(&self, new_cursor_pos: usize, input: String) -> usize {
+        new_cursor_pos.clamp(0, input.chars().count())
+    }
+
+    pub fn move_cursor_left(&mut self, input: String) {
+        let cursor_moved_left = self.cursor_index.saturating_sub(1);
+        self.cursor_index = self.clamp_cursor(cursor_moved_left, input);
+    }
+
+    pub fn move_cursor_right(&mut self, input: String) {
+        let cursor_moved_right = self.cursor_index.saturating_add(1);
+        self.cursor_index = self.clamp_cursor(cursor_moved_right, input);
+    }
+
+    pub fn reset_cursor(&mut self) {
+        self.cursor_index = 0;
     }
 
     fn load_honeycomb_data() -> Vec<HoneycombNode> {
@@ -267,7 +301,7 @@ impl App {
         //  \___//‾‾‾\\___//‾‾‾\\___/  -2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
         //       \___//‾‾‾\\___/       -3 //        |____||‾‾‾‾||____|
         //            \___/            -4 //              |____|
-        //    -2    -1     0     1     2
+        //                                //    -2    -1     0     1     2
         let positions = [
             // column -2
             (-2, -2),

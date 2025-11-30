@@ -102,7 +102,6 @@ fn run_app<B: ratatui::backend::Backend>(
                                     app.list_edit_buffer.push('\n');
                                 }
                             }
-                            // TODO: handle moving right and left in string with arrows?
                             KeyCode::Backspace => {
                                 app.list_edit_buffer.pop();
                             }
