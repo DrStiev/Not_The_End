@@ -366,8 +366,8 @@ impl App {
         }
 
         // Calculate center offset
-        let center_x = inner_area.x + inner_area.width / 2;
-        let center_y = inner_area.y + inner_area.height / 2;
+        let center_x = (inner_area.x + inner_area.width) / 2;
+        let center_y = (inner_area.y + inner_area.height) / 2;
 
         for (i, node) in self.honeycomb_nodes.iter().enumerate() {
             let node_x_calc = center_x as i32 + node.x as i32;
