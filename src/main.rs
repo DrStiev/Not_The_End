@@ -268,7 +268,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 }
             }
             Event::Mouse(mouse) => {
-                if app.popup != PopupType::None || app.editing_node {
+                if app.popup != PopupType::None || app.editing_node || app.editing_list_item {
                     continue;
                 }
 
