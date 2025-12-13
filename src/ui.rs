@@ -215,7 +215,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled("○ ", Style::default()),
         Span::styled("invece ", Style::default()),
         Span::styled("di ", Style::default()),
-        Span::styled("●", Style::default().fg(Color::White)),
+        Span::styled("● ", Style::default().fg(Color::White)),
         Span::styled(".", Style::default()),
     ]);
 
@@ -252,7 +252,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled("ESTRARRE", Style::default()),
         Span::styled(" almeno ", Style::default()),
         Span::styled("4 ", Style::default()),
-        Span::styled("○", Style::default()),
+        Span::styled("○ ", Style::default()),
         Span::styled(".", Style::default()),
     ]);
 
