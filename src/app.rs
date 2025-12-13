@@ -427,6 +427,9 @@ impl App {
                     self.pool.push(BallType::Red);
                 }
             }
+            for _ in 0..self.red_balls {
+                self.pool.push(BallType::Red);
+            }
         } else {
             // Normal mode
             for _ in 0..self.white_balls {
