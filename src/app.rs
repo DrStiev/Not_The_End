@@ -152,8 +152,6 @@ pub struct App {
     pub selected_list_item: Option<(usize, usize)>, // (section, index)
     pub editing_list_item: bool,
     pub list_edit_buffer: String,
-    // Position of cursor in the editor area
-    pub cursor_index: usize,
 }
 
 impl App {
@@ -205,39 +203,7 @@ impl App {
             selected_list_item: None,
             editing_list_item: false,
             list_edit_buffer: String::new(),
-            // Position of cursor in the editor area
-            cursor_index: 0,
         }
-    }
-
-    // Returns the byte index based on the character position.
-    //
-    // Since each character in a string can be contain multiple bytes, it's necessary to calculate
-    // the byte index based on the index of the character.
-    fn byte_index(&self, input: String) -> usize {
-        input
-            .char_indices()
-            .map(|(i, _)| i)
-            .nth(self.cursor_index)
-            .unwrap_or(input.len())
-    }
-
-    fn clamp_cursor(&self, new_cursor_pos: usize, input: String) -> usize {
-        new_cursor_pos.clamp(0, input.chars().count())
-    }
-
-    pub fn move_cursor_left(&mut self, input: String) {
-        let cursor_moved_left = self.cursor_index.saturating_sub(1);
-        self.cursor_index = self.clamp_cursor(cursor_moved_left, input);
-    }
-
-    pub fn move_cursor_right(&mut self, input: String) {
-        let cursor_moved_right = self.cursor_index.saturating_add(1);
-        self.cursor_index = self.clamp_cursor(cursor_moved_right, input);
-    }
-
-    pub fn reset_cursor(&mut self) {
-        self.cursor_index = 0;
     }
 
     fn load_honeycomb_data() -> Vec<HoneycombNode> {
@@ -447,6 +413,7 @@ impl App {
         self.current_first_draw.clear();
         self.forced_four_mode = false;
         self.random_mode = false;
+        self.focused_section = FocusedSection::WhiteBalls;
     }
 
     pub fn create_pool(&mut self) {
@@ -487,6 +454,21 @@ impl App {
         drawn
     }
 
+    fn add_to_log(&mut self, risk: bool, risk_ball: Vec<BallType>) {
+        let local: DateTime<Local> = Local::now();
+        // Aggiungi alla cronologia
+        self.history.push(DrawHistory {
+            time: local.format("%A %e %B %Y, %T").to_string(),
+            white_balls: self.white_balls,
+            red_balls: self.red_balls,
+            first_draw: self.current_first_draw.clone(),
+            risked: risk,
+            risk_draw: risk_ball,
+            confused: self.random_mode,
+            adrenalined: self.forced_four_mode,
+        });
+    }
+
     pub fn perform_first_draw(&mut self) {
         self.create_pool();
         let drawn = self.draw_from_pool(self.draw_count);
@@ -497,18 +479,7 @@ impl App {
         if self.drawn_balls.len() < 5 {
             self.popup = PopupType::ConfirmRisk;
         } else {
-            let local: DateTime<Local> = Local::now();
-            // Aggiungi alla cronologia senza rischio
-            self.history.push(DrawHistory {
-                time: local.format("%A %e %B %Y, %T").to_string(),
-                white_balls: self.white_balls,
-                red_balls: self.red_balls,
-                first_draw: self.current_first_draw.clone(),
-                risked: false,
-                risk_draw: Vec::new(),
-                confused: self.random_mode,
-                adrenalined: self.forced_four_mode,
-            });
+            self.add_to_log(false, Vec::new());
             self.update_vertical_scroll_state();
             self.popup = PopupType::None;
         }
@@ -522,35 +493,13 @@ impl App {
             risk_balls = additional.clone();
             self.drawn_balls.extend(additional);
         }
-        let local: DateTime<Local> = Local::now();
-        // Aggiungi alla cronologia con rischio
-        self.history.push(DrawHistory {
-            time: local.format("%A %e %B %Y, %T").to_string(),
-            white_balls: self.white_balls,
-            red_balls: self.red_balls,
-            first_draw: self.current_first_draw.clone(),
-            risked: true,
-            risk_draw: risk_balls,
-            confused: self.random_mode,
-            adrenalined: self.forced_four_mode,
-        });
+        self.add_to_log(true, risk_balls);
         self.update_vertical_scroll_state();
         self.popup = PopupType::None;
     }
 
     pub fn cancel_draw(&mut self) {
-        let local: DateTime<Local> = Local::now();
-        // Aggiungi alla cronologia senza rischio
-        self.history.push(DrawHistory {
-            time: local.format("%A %e %B %Y, %T").to_string(),
-            white_balls: self.white_balls,
-            red_balls: self.red_balls,
-            first_draw: self.current_first_draw.clone(),
-            risked: false,
-            risk_draw: Vec::new(),
-            confused: self.random_mode,
-            adrenalined: self.forced_four_mode,
-        });
+        self.add_to_log(false, Vec::new());
         self.update_vertical_scroll_state();
     }
 
@@ -563,7 +512,7 @@ impl App {
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) {
         // Check tab clicks
         for (i, area) in self.tab_areas.iter().enumerate() {
-            if x >= area.x && x < area.x + area.width && y >= area.y && y < area.y + area.height {
+            if is_inside(x, y, area) {
                 self.current_tab = i;
                 return;
             }
@@ -592,16 +541,16 @@ impl App {
             for idx in 0..4 {
                 if is_inside(x, y, &self.misfortunes_area[idx]) && !self.editing_list_item {
                     self.selected_list_item = Some((0, idx));
-                }
-            }
-            for idx in 0..2 {
-                if is_inside(x, y, &self.resources_area[idx]) && !self.editing_list_item {
-                    self.selected_list_item = Some((idx + 1, 0));
-                }
-            }
-            for idx in 0..3 {
-                if is_inside(x, y, &self.lections_area[idx]) && !self.editing_list_item {
+                } else if idx < 3
+                    && is_inside(x, y, &self.lections_area[idx])
+                    && !self.editing_list_item
+                {
                     self.selected_list_item = Some((3, idx));
+                } else if idx < 2
+                    && is_inside(x, y, &self.resources_area[idx])
+                    && !self.editing_list_item
+                {
+                    self.selected_list_item = Some((idx + 1, 0));
                 }
             }
         }

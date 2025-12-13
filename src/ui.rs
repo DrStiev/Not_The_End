@@ -826,6 +826,7 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
         }
 
         if entry.confused {
+            lines.push(Line::from(""));
             lines.push(Line::from(vec![Span::styled(
                 "Sotto effetto di Confusione",
                 Style::default().add_modifier(Modifier::BOLD),
@@ -833,6 +834,7 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
         }
 
         if entry.adrenalined {
+            lines.push(Line::from(""));
             lines.push(Line::from(vec![Span::styled(
                 "Sotto effetto di Adrenalina",
                 Style::default().add_modifier(Modifier::BOLD),
