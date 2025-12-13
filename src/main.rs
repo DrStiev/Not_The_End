@@ -172,7 +172,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                             }
                                         }
                                         FocusedSection::DrawInput => {
-                                            if app.draw_count < 4 {
+                                            if app.draw_count < 4 && !app.forced_four_mode {
                                                 app.draw_count += 1;
                                             }
                                         }
@@ -215,7 +215,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                             }
                                         }
                                         FocusedSection::DrawInput => {
-                                            if app.draw_count > 1 {
+                                            if app.draw_count > 1 && !app.forced_four_mode {
                                                 app.draw_count -= 1;
                                             }
                                         }
