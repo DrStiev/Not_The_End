@@ -299,7 +299,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("PROVA", Style::default().fg(Color::LightYellow)),
             Span::styled(" quando ", Style::default()),
             Span::styled("ciò ", Style::default()),
-            Span::styled("che  ", Style::default()),
+            Span::styled("che ", Style::default()),
             Span::styled("stai ", Style::default()),
             Span::styled("tentando ", Style::default()),
             Span::styled("di ", Style::default()),
@@ -417,23 +417,20 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("lo ", Style::default()),
             Span::styled("sviluppo ", Style::default()),
             Span::styled("dell' ", Style::default()),
-            Span::styled("eroe. ", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("Dichiara ", Style::default()),
+            Span::styled("eroe.", Style::default()),
+            Span::styled(" Dichiara ", Style::default()),
             Span::styled("la ", Style::default()),
             Span::styled("PROVA CRUCIALE", Style::default().fg(Color::LightYellow)),
             Span::styled(" prima ", Style::default()),
             Span::styled("di ", Style::default()),
-            Span::styled("ESTRARRE ", Style::default().fg(Color::LightYellow)),
+            Span::styled("ESTRARRE", Style::default().fg(Color::LightYellow)),
             Span::styled(".", Style::default()),
-        ]),
-        Line::from(vec![
-            Span::styled("Affronta ", Style::default()),
+            Span::styled(" Affronta ", Style::default()),
             Span::styled("la ", Style::default()),
             Span::styled("PROVA", Style::default().fg(Color::LightYellow)),
             Span::styled(" normalmente.", Style::default()),
         ]),
+        Line::from(""),
         Line::from(vec![
             Span::styled("Scegli ", Style::default()),
             Span::styled("un ", Style::default()),
@@ -446,7 +443,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("prova:", Style::default()),
         ]),
         Line::from(vec![
-            Span::styled("Guadagni ", Style::default()),
+            Span::styled("1. Guadagni ", Style::default()),
             Span::styled("o ", Style::default()),
             Span::styled("cambi ", Style::default()),
             Span::styled("un ", Style::default()),
@@ -454,13 +451,13 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled(".", Style::default()),
         ]),
         Line::from(vec![
-            Span::styled("Impari ", Style::default()),
+            Span::styled("2. Impari ", Style::default()),
             Span::styled("una ", Style::default()),
             Span::styled("LEZIONE", Style::default().fg(Color::LightYellow)),
             Span::styled(".", Style::default()),
         ]),
         Line::from(vec![
-            Span::styled("Vieni ", Style::default()),
+            Span::styled("3. Vieni ", Style::default()),
             Span::styled("segnato ", Style::default()),
             Span::styled("da ", Style::default()),
             Span::styled("una ", Style::default()),
@@ -477,9 +474,19 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_widget(text_paragraph, right_layout[2]);
 }
 
+fn graph_node_title(idx: usize) -> String {
+    match idx {
+        // hardcoded position of cell inside hexgrid graph
+        // counting left to right, top to bottom (0 to 18)
+        9 => " Archetipo ".to_string(),
+        4 | 5 | 8 | 10 | 13 | 14 => " Qualità ".to_string(),
+        _ => " Abilità ".to_string(),
+    }
+}
+
 fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let block = Block::default()
-        .title("Scheda HexSys (Click per selezionare, Enter per modificare)")
+        .title(" Scheda HexSys (Click per selezionare, Enter per modificare) ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
@@ -532,6 +539,7 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
         };
 
         let node_block = Block::default()
+            .title(Line::from(graph_node_title(i)).centered())
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .style(node_style);
@@ -549,7 +557,7 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
             &node.text
         };
 
-        let paragraph = Paragraph::new(node_text)
+        let paragraph = Paragraph::new("\n".to_owned() + node_text)
             .block(node_block)
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });

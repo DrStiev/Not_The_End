@@ -250,7 +250,7 @@ impl App {
 
     fn create_honeycomb_layout_with_data(texts: Vec<String>) -> Vec<HoneycombNode> {
         let mut nodes = Vec::new();
-        let node_width = 12; // 12
+        let node_width = 14; // 12
         let node_height = 6; // 6
         let spacing_x = 0;
         let spacing_y = 0;
