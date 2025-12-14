@@ -23,7 +23,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(" Naviga (Tab) "),
+                .title(" Menù (Tab) "),
         )
         .select(app.current_tab)
         .style(Style::default().fg(Color::White))
@@ -212,11 +212,11 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled(" aggiungi ", Style::default()),
         Span::styled("al ", Style::default()),
         Span::styled("POOL ", Style::default()),
-        Span::styled("○ ", Style::default()),
-        Span::styled("invece ", Style::default()),
+        Span::styled("○", Style::default().fg(Color::Gray)),
+        Span::styled(" invece ", Style::default()),
         Span::styled("di ", Style::default()),
-        Span::styled("● ", Style::default().fg(Color::White)),
-        Span::styled(".", Style::default()),
+        Span::styled("●", Style::default().fg(Color::White)),
+        Span::styled(" .", Style::default()),
     ]);
 
     let confusion_paragraph = Paragraph::new(confusion_text)
@@ -252,8 +252,8 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled("ESTRARRE", Style::default()),
         Span::styled(" almeno ", Style::default()),
         Span::styled("4 ", Style::default()),
-        Span::styled("○ ", Style::default()),
-        Span::styled(".", Style::default()),
+        Span::styled("○", Style::default().fg(Color::Gray)),
+        Span::styled(" .", Style::default()),
     ]);
 
     let adrenalin_paragraph = Paragraph::new(adrenalin_text)
@@ -263,9 +263,9 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     f.render_widget(adrenalin_paragraph, right_middle_layout[1]);
 
-    // Bottone reset
+    // Bottone reset / quit
     let reset_block = Block::default()
-        .title(" Reset (R) ")
+        .title(" Reset (R) / Quit (Q) ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
@@ -278,6 +278,12 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(" per resettare.", Style::default()),
+        Span::styled(" Premi ", Style::default()),
+        Span::styled(
+            "Q",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" per uscire.", Style::default()),
     ]);
 
     let reset_paragraph = Paragraph::new(reset_text)
@@ -416,7 +422,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("per ", Style::default()),
             Span::styled("lo ", Style::default()),
             Span::styled("sviluppo ", Style::default()),
-            Span::styled("dell' ", Style::default()),
+            Span::styled("dell'", Style::default()),
             Span::styled("eroe.", Style::default()),
             Span::styled(" Dichiara ", Style::default()),
             Span::styled("la ", Style::default()),
@@ -437,7 +443,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("risultato ", Style::default()),
             Span::styled("in ", Style::default()),
             Span::styled("base ", Style::default()),
-            Span::styled("all' ", Style::default()),
+            Span::styled("all'", Style::default()),
             Span::styled("esito ", Style::default()),
             Span::styled("della ", Style::default()),
             Span::styled("prova:", Style::default()),
@@ -878,7 +884,7 @@ fn create_filled_balls_display(count: usize, color: Color) -> Line<'static> {
 fn create_empty_balls_display(count: usize) -> Line<'static> {
     let mut spans = Vec::new();
     for _ in 0..count {
-        spans.push(Span::styled("○ ", Style::default().fg(Color::White)));
+        spans.push(Span::styled("○ ", Style::default().fg(Color::Gray)));
     }
     Line::from(spans)
 }

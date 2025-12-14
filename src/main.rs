@@ -243,9 +243,12 @@ fn run_app<B: ratatui::backend::Backend>(
                             KeyCode::Enter => {
                                 if app.current_tab == 0 {
                                     if app.focused_section == FocusedSection::DrawInput
-                                        && !app.first_draw_complete
+                                    // && !app.first_draw_complete
                                     {
-                                        app.popup = PopupType::ConfirmDraw;
+                                        // perform draw iff there are tokens to be drawn
+                                        if app.white_balls > 0 && app.red_balls > 0 {
+                                            app.popup = PopupType::ConfirmDraw;
+                                        }
                                     } else if app.focused_section == FocusedSection::ForcedFour {
                                         app.forced_four_mode = !app.forced_four_mode;
                                         if app.forced_four_mode {

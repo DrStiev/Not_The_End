@@ -120,7 +120,7 @@ pub struct App {
     pub focused_section: FocusedSection,
     pub popup: PopupType,
     pub drawn_balls: Vec<BallType>,
-    pub first_draw_complete: bool,
+    // pub first_draw_complete: bool,
     pub pool: Vec<BallType>,
     pub current_tab: usize,
     // Log data
@@ -166,7 +166,7 @@ impl App {
             focused_section: FocusedSection::WhiteBalls,
             popup: PopupType::None,
             drawn_balls: Vec::new(),
-            first_draw_complete: false,
+            // first_draw_complete: false,
             pool: Vec::new(),
             current_tab: 0,
             // Log data
@@ -407,7 +407,7 @@ impl App {
         self.red_balls = 0;
         self.draw_count = 1;
         self.drawn_balls.clear();
-        self.first_draw_complete = false;
+        // self.first_draw_complete = false;
         self.pool.clear();
         self.popup = PopupType::None;
         self.current_first_draw.clear();
@@ -470,6 +470,10 @@ impl App {
             confused: self.random_mode,
             adrenalined: self.forced_four_mode,
         });
+
+        // after add result to logs clear status modifiers
+        self.random_mode = false;
+        self.forced_four_mode = false;
     }
 
     pub fn perform_first_draw(&mut self) {
@@ -477,7 +481,7 @@ impl App {
         let drawn = self.draw_from_pool(self.draw_count);
         self.drawn_balls = drawn.clone();
         self.current_first_draw = drawn;
-        self.first_draw_complete = true;
+        // self.first_draw_complete = true;
 
         if self.drawn_balls.len() < 5 {
             self.popup = PopupType::ConfirmRisk;
