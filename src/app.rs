@@ -191,7 +191,7 @@ impl App {
             lections_area: [Rect::default(), Rect::default(), Rect::default()],
             // Honeycomb grid
             honeycomb_nodes,
-            selected_node: None,
+            selected_node: Some(9), // central node: archetipo
             editing_node: false,
             node_edit_buffer: String::new(),
             graph_area: Rect::default(), // memorizzo area grafo per rendering
@@ -200,7 +200,7 @@ impl App {
             forced_four_mode: false,
             // List tab data
             list_data,
-            selected_list_item: None,
+            selected_list_item: Some((0, 0)),
             editing_list_item: false,
             list_edit_buffer: String::new(),
         }

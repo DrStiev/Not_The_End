@@ -58,13 +58,14 @@ fn run_app<B: ratatui::backend::Backend>(
             // Controlla se evento e' un KeyDown non un KeyRelease
             Event::Key(key) => {
                 if key.kind == KeyEventKind::Press {
+                    // editing honeycomb node
                     if app.editing_node {
                         match key.code {
                             KeyCode::Esc => {
                                 app.finish_node_editing();
                             }
                             KeyCode::Char(c) => {
-                                if app.node_edit_buffer.len() < 25 {
+                                if app.node_edit_buffer.len() < 35 {
                                     app.node_edit_buffer.push(c);
                                 }
                             }
@@ -76,16 +77,17 @@ fn run_app<B: ratatui::backend::Backend>(
                         continue;
                     }
                     if app.editing_list_item {
+                        // editing 3rd tab
                         match key.code {
                             KeyCode::Esc => {
                                 app.finish_list_editing();
                             }
                             KeyCode::Char(c) => {
                                 let max_len = match app.selected_list_item {
-                                    Some((0, _)) => 120,               // Misfortunes
-                                    Some((1, _)) | Some((2, _)) => 50, // Resources
-                                    Some((3, _)) => 500,               // Lessons
-                                    _ => 50,
+                                    Some((0, _)) => 75,                 // Misfortunes
+                                    Some((1, _)) | Some((2, _)) => 120, // Resources
+                                    Some((3, _)) => 500,                // Lessons
+                                    _ => 0,                             // others
                                 };
                                 if app.list_edit_buffer.len() < max_len {
                                     app.list_edit_buffer.push(c);
@@ -93,10 +95,10 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                             KeyCode::Enter => {
                                 let max_len = match app.selected_list_item {
-                                    Some((0, _)) => 120,               // Misfortunes
-                                    Some((1, _)) | Some((2, _)) => 50, // Resources
-                                    Some((3, _)) => 500,               // Lessons
-                                    _ => 50,
+                                    Some((0, _)) => 75,                 // Misfortunes
+                                    Some((1, _)) | Some((2, _)) => 120, // Resources
+                                    Some((3, _)) => 500,                // Lessons
+                                    _ => 0,                             // others
                                 };
                                 if app.list_edit_buffer.len() < max_len {
                                     app.list_edit_buffer.push('\n');
@@ -128,14 +130,17 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                     } else {
                         match key.code {
+                            // quit or reset
                             KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(()),
                             KeyCode::Char('r') | KeyCode::Char('R') => {
                                 app.reset();
                             }
+                            // moving through tab
                             KeyCode::Tab => {
                                 // total number of tabs = 4
                                 app.current_tab = (app.current_tab + 1) % 4;
                             }
+                            // moving through element of tab
                             KeyCode::Right => {
                                 if app.current_tab == 0 {
                                     app.focused_section = match app.focused_section {
@@ -145,8 +150,37 @@ fn run_app<B: ratatui::backend::Backend>(
                                         FocusedSection::ForcedFour => FocusedSection::DrawInput,
                                         FocusedSection::DrawInput => FocusedSection::WhiteBalls,
                                     };
+                                } else if app.current_tab == 2 {
+                                    if let Some((section, idx)) = app.selected_list_item {
+                                        match section {
+                                            0 => {
+                                                if idx < 3 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx + 1));
+                                                } else {
+                                                    app.selected_list_item = Some((section + 1, 0));
+                                                }
+                                            }
+                                            1 => {
+                                                app.selected_list_item = Some((2, 0));
+                                            }
+                                            2 => {
+                                                app.selected_list_item = Some((3, 0));
+                                            }
+                                            3 => {
+                                                if idx < 2 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx + 1));
+                                                } else {
+                                                    app.selected_list_item = Some((0, 0));
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                 }
                             }
+                            // moving through element of tab
                             KeyCode::Left => {
                                 if app.current_tab == 0 {
                                     app.focused_section = match app.focused_section {
@@ -156,8 +190,37 @@ fn run_app<B: ratatui::backend::Backend>(
                                         FocusedSection::ForcedFour => FocusedSection::RandomMode,
                                         FocusedSection::DrawInput => FocusedSection::ForcedFour,
                                     };
+                                } else if app.current_tab == 2 {
+                                    if let Some((section, idx)) = app.selected_list_item {
+                                        match section {
+                                            0 => {
+                                                if idx > 0 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx - 1));
+                                                } else {
+                                                    app.selected_list_item = Some((3, 2));
+                                                }
+                                            }
+                                            1 => {
+                                                app.selected_list_item = Some((0, 3));
+                                            }
+                                            2 => {
+                                                app.selected_list_item = Some((1, 0));
+                                            }
+                                            3 => {
+                                                if idx > 0 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx - 1));
+                                                } else {
+                                                    app.selected_list_item = Some((2, 0));
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                 }
                             }
+                            // editing first tab tokens
                             KeyCode::Up => {
                                 if app.current_tab == 0 {
                                     match app.focused_section {
@@ -178,12 +241,14 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                         _ => {}
                                     }
+                                    // scroll logs
                                 } else if app.current_tab == 3 {
                                     if app.vertical_scroll > 0 {
                                         app.vertical_scroll -= 1;
                                         app.vertical_scroll_state =
                                             app.vertical_scroll_state.position(app.vertical_scroll);
                                     }
+                                    // move through list item of 3rd tab
                                 } else if app.current_tab == 2 {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
@@ -201,6 +266,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                     }
                                 }
                             }
+                            // editing first tab tokens
                             KeyCode::Down => {
                                 if app.current_tab == 0 {
                                     match app.focused_section {
@@ -221,6 +287,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                         _ => {}
                                     }
+                                    // scroll logs
                                 } else if app.current_tab == 3 {
                                     let max_scroll = (app.history.len() * 13).saturating_sub(10);
                                     if app.vertical_scroll < max_scroll {
@@ -228,6 +295,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         app.vertical_scroll_state =
                                             app.vertical_scroll_state.position(app.vertical_scroll);
                                     }
+                                    // move through list item of 3rd tab
                                 } else if app.current_tab == 2 {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {

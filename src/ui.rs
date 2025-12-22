@@ -625,16 +625,35 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Resources section (2 lists of 5)
+    let mut style_left = Style::default();
+    let mut style_right = Style::default();
     let resources_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(main_layout[1]);
 
+    if let Some((section, _)) = app.selected_list_item {
+        match section {
+            1 => {
+                style_left = Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD);
+            }
+            2 => {
+                style_right = Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD);
+            }
+            _ => {}
+        }
+    }
+
     // Left resources
     let left_block = Block::default()
         .title(" Di quali RISORSE dispongo? ")
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded);
+        .border_type(BorderType::Rounded)
+        .border_style(style_left);
 
     let left_items: Vec<Line> = app
         .list_data
@@ -663,7 +682,8 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let right_block = Block::default()
         .title(" Di quali RISORSE dispongo? ")
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded);
+        .border_type(BorderType::Rounded)
+        .border_style(style_right);
 
     let right_items: Vec<Line> = app
         .list_data
