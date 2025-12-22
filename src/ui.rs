@@ -481,12 +481,13 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn graph_node_title(idx: usize) -> String {
+    // let s = idx.to_string();
     match idx {
         // hardcoded position of cell inside hexgrid graph
         // counting left to right, top to bottom (0 to 18)
-        9 => " Archetipo ".to_string(),
-        4 | 5 | 8 | 10 | 13 | 14 => " Qualità ".to_string(),
-        _ => " Abilità ".to_string(),
+        9 => " Archetipo ".to_string(),                      //+ &s,
+        4 | 5 | 8 | 10 | 13 | 14 => " Qualità ".to_string(), //+ &s,
+        _ => " Abilità ".to_string(),                        //+ &s,
     }
 }
 

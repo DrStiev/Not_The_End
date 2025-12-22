@@ -178,6 +178,30 @@ fn run_app<B: ratatui::backend::Backend>(
                                             _ => {}
                                         }
                                     }
+                                } else if app.current_tab == 1 {
+                                    if let Some(idx) = app.selected_node {
+                                        match idx {
+                                            0 | 1 | 2 | 4 | 5 | 6 | 11 | 12 | 3 => {
+                                                app.selected_node = Some(idx + 4);
+                                            }
+                                            8 | 9 | 10 | 7 => {
+                                                app.selected_node = Some(idx + 5);
+                                            }
+                                            13 | 14 | 15 => {
+                                                app.selected_node = Some(idx + 3);
+                                            }
+                                            16 => {
+                                                app.selected_node = Some(0);
+                                            }
+                                            17 => {
+                                                app.selected_node = Some(1);
+                                            }
+                                            18 => {
+                                                app.selected_node = Some(2);
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                 }
                             }
                             // moving through element of tab
@@ -214,6 +238,30 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 } else {
                                                     app.selected_list_item = Some((2, 0));
                                                 }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                } else if app.current_tab == 1 {
+                                    if let Some(idx) = app.selected_node {
+                                        match idx {
+                                            16 | 17 | 18 | 12 | 13 | 14 | 7 | 6 | 15 => {
+                                                app.selected_node = Some(idx - 4);
+                                            }
+                                            8 | 9 | 10 | 11 => {
+                                                app.selected_node = Some(idx - 5);
+                                            }
+                                            3 | 4 | 5 => {
+                                                app.selected_node = Some(idx - 3);
+                                            }
+                                            0 => {
+                                                app.selected_node = Some(16);
+                                            }
+                                            1 => {
+                                                app.selected_node = Some(17);
+                                            }
+                                            2 => {
+                                                app.selected_node = Some(18);
                                             }
                                             _ => {}
                                         }
@@ -264,6 +312,52 @@ fn run_app<B: ratatui::backend::Backend>(
                                             _ => {}
                                         }
                                     }
+                                } else if app.current_tab == 1 {
+                                    if let Some(idx) = app.selected_node {
+                                        match idx {
+                                            // first column
+                                            0..3 => {
+                                                if idx == 0 {
+                                                    app.selected_node = Some(2);
+                                                } else {
+                                                    app.selected_node = Some(idx - 1);
+                                                }
+                                            }
+                                            // second column
+                                            3..7 => {
+                                                if idx == 3 {
+                                                    app.selected_node = Some(6);
+                                                } else {
+                                                    app.selected_node = Some(idx - 1);
+                                                }
+                                            }
+                                            // third column
+                                            7..12 => {
+                                                if idx == 7 {
+                                                    app.selected_node = Some(11);
+                                                } else {
+                                                    app.selected_node = Some(idx - 1);
+                                                }
+                                            }
+                                            // fourth column
+                                            12..16 => {
+                                                if idx == 12 {
+                                                    app.selected_node = Some(15);
+                                                } else {
+                                                    app.selected_node = Some(idx - 1);
+                                                }
+                                            }
+                                            // fifth column
+                                            16..19 => {
+                                                if idx == 16 {
+                                                    app.selected_node = Some(18);
+                                                } else {
+                                                    app.selected_node = Some(idx - 1);
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                 }
                             }
                             // editing first tab tokens
@@ -302,6 +396,48 @@ fn run_app<B: ratatui::backend::Backend>(
                                             1 | 2 => {
                                                 app.selected_list_item =
                                                     Some((section, (idx + 1) % 5));
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                } else if app.current_tab == 1 {
+                                    if let Some(idx) = app.selected_node {
+                                        match idx {
+                                            // first column
+                                            0..3 => {
+                                                app.selected_node = Some((idx + 1) % 3);
+                                            }
+                                            // second column
+                                            3..7 => {
+                                                if idx == 6 {
+                                                    app.selected_node = Some(3);
+                                                } else {
+                                                    app.selected_node = Some(idx + 1);
+                                                }
+                                            }
+                                            // third column
+                                            7..12 => {
+                                                if idx == 11 {
+                                                    app.selected_node = Some(7);
+                                                } else {
+                                                    app.selected_node = Some(idx + 1);
+                                                }
+                                            }
+                                            // fourth column
+                                            12..16 => {
+                                                if idx == 15 {
+                                                    app.selected_node = Some(12);
+                                                } else {
+                                                    app.selected_node = Some(idx + 1);
+                                                }
+                                            }
+                                            // fifth column
+                                            16..19 => {
+                                                if idx == 18 {
+                                                    app.selected_node = Some(16);
+                                                } else {
+                                                    app.selected_node = Some(idx + 1);
+                                                }
                                             }
                                             _ => {}
                                         }
