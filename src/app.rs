@@ -42,7 +42,9 @@ pub enum FocusedSection {
 pub struct DrawHistory {
     pub time: String,
     pub white_balls: usize,
+    pub traits: Vec<usize>,
     pub red_balls: usize,
+    pub misfortunes: [usize; 4],
     pub first_draw: Vec<BallType>,
     pub risked: bool,
     pub risk_draw: Vec<BallType>,
@@ -381,7 +383,7 @@ impl App {
 
     pub fn finish_node_editing(&mut self) {
         if let Some(idx) = self.selected_node {
-            self.honeycomb_nodes[idx].text = self.node_edit_buffer.clone();
+            self.honeycomb_nodes[idx].text = self.node_edit_buffer.clone().trim().to_string();
             self.save_data();
         }
         self.editing_node = false;
@@ -405,11 +407,23 @@ impl App {
     pub fn finish_list_editing(&mut self) {
         if let Some((section, idx)) = self.selected_list_item {
             match section {
-                0 => self.list_data.misfortunes[idx] = self.list_edit_buffer.clone(),
-                1 => self.list_data.misfortunes_red_balls[idx] = self.list_edit_buffer.clone(),
-                2 => self.list_data.left_resources[idx] = self.list_edit_buffer.clone(),
-                3 => self.list_data.right_resources[idx] = self.list_edit_buffer.clone(),
-                4 => self.list_data.lessons[idx] = self.list_edit_buffer.clone(),
+                0 => {
+                    self.list_data.misfortunes[idx] =
+                        self.list_edit_buffer.clone().trim().to_string()
+                }
+                1 => {
+                    self.list_data.misfortunes_red_balls[idx] =
+                        self.list_edit_buffer.clone().trim().to_string()
+                }
+                2 => {
+                    self.list_data.left_resources[idx] =
+                        self.list_edit_buffer.clone().trim().to_string()
+                }
+                3 => {
+                    self.list_data.right_resources[idx] =
+                        self.list_edit_buffer.clone().trim().to_string()
+                }
+                4 => self.list_data.lessons[idx] = self.list_edit_buffer.clone().trim().to_string(),
                 _ => {}
             }
             self.save_data();
@@ -479,7 +493,9 @@ impl App {
         self.history.push(DrawHistory {
             time: local.format("%A %e %B %Y, %T").to_string(),
             white_balls: self.white_balls,
+            traits: self.used_traits.clone(),
             red_balls: self.red_balls,
+            misfortunes: self.additional_red_balls.clone(),
             first_draw: self.current_first_draw.clone(),
             risked: risk,
             risk_draw: risk_ball,

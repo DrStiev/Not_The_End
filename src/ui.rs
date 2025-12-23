@@ -687,6 +687,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             .style(style);
 
         let n = app.list_data.misfortunes_red_balls[i]
+            .trim()
             .parse::<usize>()
             .unwrap_or(0); // obtain 0 if NaN
         let text = if app.list_data.misfortunes_red_balls[i].is_empty() || n == 0 {
@@ -827,11 +828,45 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
         )));
         lines.push(Line::from(""));
 
+        let mut s: String = String::new();
+        if !entry.traits.is_empty() {
+            for idx in &entry.traits {
+                s.push_str(&format!("{}, ", app.honeycomb_nodes[*idx].text));
+            }
+        } else {
+            s.push_str("Nessuno");
+        }
+
         // Pallini bianchi usati
         lines.push(Line::from(vec![
-            Span::styled("Traits: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Totale Token messi in gioco: ",
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
             Span::raw(format!("{}", entry.white_balls)),
         ]));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "Tratti della scheda utilizzati: ",
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(format!("{}", s)),
+        ]));
+
+        lines.push(Line::from(""));
+
+        let mut s: String = String::new();
+        let mut b: bool = false;
+        // idx contains the number of additional red balls where I need the position in the array
+        for (i, idx) in entry.misfortunes.iter().enumerate() {
+            if *idx != 0 {
+                b = true;
+                s.push_str(&format!("{}, ", app.list_data.misfortunes[i]));
+            }
+        }
+        if !b {
+            s.push_str("Nessuna");
+        }
 
         // Pallini rossi usati
         lines.push(Line::from(vec![
@@ -840,6 +875,13 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
                 Style::default().add_modifier(Modifier::BOLD),
             ),
             Span::raw(format!("{}", entry.red_balls)),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "Sventure messe in gioco: ",
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(format!("{}", s)),
         ]));
 
         lines.push(Line::from(""));

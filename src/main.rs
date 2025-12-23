@@ -84,10 +84,11 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                             KeyCode::Char(c) => {
                                 let max_len = match app.selected_list_item {
-                                    Some((0, _)) => 75,                 // Misfortunes
-                                    Some((1, _)) | Some((2, _)) => 120, // Resources
-                                    Some((3, _)) => 500,                // Lessons
-                                    _ => 0,                             // others
+                                    Some((0, _)) => 50,                // Misfortunes
+                                    Some((1, _)) => 2,                 // Misfortunes Difficulties
+                                    Some((2, _)) | Some((3, _)) => 75, // Resources
+                                    Some((4, _)) => 500,               // Lessons
+                                    _ => 0,                            // others
                                 };
                                 if app.list_edit_buffer.len() < max_len {
                                     app.list_edit_buffer.push(c);
@@ -95,10 +96,11 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                             KeyCode::Enter => {
                                 let max_len = match app.selected_list_item {
-                                    Some((0, _)) => 75,                 // Misfortunes
-                                    Some((1, _)) | Some((2, _)) => 120, // Resources
-                                    Some((3, _)) => 500,                // Lessons
-                                    _ => 0,                             // others
+                                    Some((0, _)) => 50,                // Misfortunes
+                                    Some((1, _)) => 2,                 // Misfortunes Difficulties
+                                    Some((2, _)) | Some((3, _)) => 75, // Resources
+                                    Some((4, _)) => 500,               // Lessons
+                                    _ => 0,                            // others
                                 };
                                 if app.list_edit_buffer.len() < max_len {
                                     app.list_edit_buffer.push('\n');
@@ -156,6 +158,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                             1 => {
                                                 let value = &app.list_data.misfortunes_red_balls
                                                     [idx]
+                                                    .trim()
                                                     .parse::<usize>()
                                                     .unwrap_or(0); // obtain 0 if NaN
                                                 // check if not used then push and add token, otherwise remove and remove token
