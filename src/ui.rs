@@ -493,7 +493,9 @@ fn graph_node_title(idx: usize) -> String {
 
 fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let block = Block::default()
-        .title(" Scheda HexSys (Click per selezionare, Enter per modificare) ")
+        .title(
+            " Scheda HexSys (Click per SELEZIONARE, Enter per MODIFICARE, E per ATTIVARE Tratto) ",
+        )
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
@@ -536,10 +538,15 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
         let node_y = node_y_calc as u16;
 
         let is_selected = app.selected_node == Some(i);
+        let is_trait_used = app.used_traits.contains(&i);
 
         let node_style = if is_selected {
             Style::default()
                 .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else if is_trait_used {
+            Style::default()
+                .fg(Color::Green)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
@@ -644,7 +651,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Resources section (2 lists of 5)
-    #[allow(unused_assignments)] 
+    #[allow(unused_assignments)]
     let mut items: Vec<Line> = vec![
         Line::from(Span::styled("[Vuoto]", Style::default())),
         Line::from(Span::styled("[Vuoto]", Style::default())),

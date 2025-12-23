@@ -135,6 +135,22 @@ fn run_app<B: ratatui::backend::Backend>(
                             KeyCode::Char('r') | KeyCode::Char('R') => {
                                 app.reset();
                             }
+                            // select trait to use as token for next draw
+                            KeyCode::Char('e') | KeyCode::Char('E') => {
+                                if app.current_tab == 1 && app.selected_node.is_some() {
+                                    let idx = app.selected_node.unwrap();
+                                    // check if not used then push and add token, otherwise remove and remove token
+                                    if app.used_traits.contains(&idx) {
+                                        let _ = app.used_traits.swap_remove(
+                                            app.used_traits.iter().position(|n| *n == idx).unwrap(),
+                                        );
+                                        app.white_balls -= 1;
+                                    } else {
+                                        app.used_traits.push(idx);
+                                        app.white_balls += 1;
+                                    }
+                                }
+                            }
                             // moving through tab
                             KeyCode::Tab => {
                                 // total number of tabs = 4
@@ -273,12 +289,14 @@ fn run_app<B: ratatui::backend::Backend>(
                                 if app.current_tab == 0 {
                                     match app.focused_section {
                                         FocusedSection::WhiteBalls => {
-                                            if app.white_balls < 10 {
+                                            // 20 token as hard cap
+                                            if app.white_balls < 20 {
                                                 app.white_balls += 1;
                                             }
                                         }
                                         FocusedSection::RedBalls => {
-                                            if app.red_balls < 10 {
+                                            // 20 token as hard cap
+                                            if app.red_balls < 20 {
                                                 app.red_balls += 1;
                                             }
                                         }
@@ -367,6 +385,10 @@ fn run_app<B: ratatui::backend::Backend>(
                                         FocusedSection::WhiteBalls => {
                                             if app.white_balls > 0 {
                                                 app.white_balls -= 1;
+                                                // pop first trait if present. do't care which one
+                                                if !app.used_traits.is_empty() {
+                                                    let _ = app.used_traits.pop();
+                                                }
                                             }
                                         }
                                         FocusedSection::RedBalls => {

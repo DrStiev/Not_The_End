@@ -144,7 +144,8 @@ pub struct App {
     pub selected_node: Option<usize>,
     pub editing_node: bool,
     pub node_edit_buffer: String,
-    pub graph_area: Rect, // memorizzo area grafo per rendering
+    pub graph_area: Rect,        // memorizzo area grafo per rendering
+    pub used_traits: Vec<usize>, // vector to store honeycomb idx when decide to enable trait for draw
     // New modes
     pub random_mode: bool,
     pub forced_four_mode: bool,
@@ -196,6 +197,7 @@ impl App {
             editing_node: false,
             node_edit_buffer: String::new(),
             graph_area: Rect::default(), // memorizzo area grafo per rendering
+            used_traits: Vec::new(), // vector to store honeycomb idx when decide to enable trait for draw
             // New mode
             random_mode: false,
             forced_four_mode: false,
@@ -475,6 +477,8 @@ impl App {
         // after add result to logs clear status modifiers
         self.random_mode = false;
         self.forced_four_mode = false;
+        // clear array of used traits
+        self.used_traits.clear();
     }
 
     pub fn perform_first_draw(&mut self) {
