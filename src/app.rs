@@ -85,6 +85,7 @@ struct HoneycombData {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ListData {
     pub misfortunes: [String; 4],
+    pub misfortunes_red_balls: [String; 4],
     pub left_resources: [String; 5],
     pub right_resources: [String; 5],
     pub lessons: [String; 3],
@@ -94,6 +95,7 @@ impl Default for ListData {
     fn default() -> Self {
         ListData {
             misfortunes: [String::new(), String::new(), String::new(), String::new()],
+            misfortunes_red_balls: [String::new(), String::new(), String::new(), String::new()],
             left_resources: [
                 String::new(),
                 String::new(),
@@ -137,6 +139,7 @@ pub struct App {
     pub random_mode_area: Rect,
     pub forced_four_area: Rect,
     pub misfortunes_area: [Rect; 4],
+    pub misfortunes_red_balls_area: [Rect; 4],
     pub resources_area: [Rect; 2],
     pub lections_area: [Rect; 3],
     // Honeycomb grid
@@ -154,6 +157,7 @@ pub struct App {
     pub selected_list_item: Option<(usize, usize)>, // (section idx, item idx)
     pub editing_list_item: bool,
     pub list_edit_buffer: String,
+    pub additional_red_balls: [usize; 4], // vector to store additional difficulties associated to active misfortune
 }
 
 impl App {
@@ -189,6 +193,12 @@ impl App {
                 Rect::default(),
                 Rect::default(),
             ],
+            misfortunes_red_balls_area: [
+                Rect::default(),
+                Rect::default(),
+                Rect::default(),
+                Rect::default(),
+            ],
             resources_area: [Rect::default(), Rect::default()],
             lections_area: [Rect::default(), Rect::default(), Rect::default()],
             // Honeycomb grid
@@ -206,6 +216,7 @@ impl App {
             selected_list_item: Some((0, 0)),
             editing_list_item: false,
             list_edit_buffer: String::new(),
+            additional_red_balls: [0, 0, 0, 0], // vector to store additional difficulties associated to active misfortune
         }
     }
 
@@ -382,9 +393,10 @@ impl App {
             self.editing_list_item = true;
             self.list_edit_buffer = match section {
                 0 => self.list_data.misfortunes[idx].clone(),
-                1 => self.list_data.left_resources[idx].clone(),
-                2 => self.list_data.right_resources[idx].clone(),
-                3 => self.list_data.lessons[idx].clone(),
+                1 => self.list_data.misfortunes_red_balls[idx].clone(),
+                2 => self.list_data.left_resources[idx].clone(),
+                3 => self.list_data.right_resources[idx].clone(),
+                4 => self.list_data.lessons[idx].clone(),
                 _ => String::new(),
             };
         }
@@ -394,9 +406,10 @@ impl App {
         if let Some((section, idx)) = self.selected_list_item {
             match section {
                 0 => self.list_data.misfortunes[idx] = self.list_edit_buffer.clone(),
-                1 => self.list_data.left_resources[idx] = self.list_edit_buffer.clone(),
-                2 => self.list_data.right_resources[idx] = self.list_edit_buffer.clone(),
-                3 => self.list_data.lessons[idx] = self.list_edit_buffer.clone(),
+                1 => self.list_data.misfortunes_red_balls[idx] = self.list_edit_buffer.clone(),
+                2 => self.list_data.left_resources[idx] = self.list_edit_buffer.clone(),
+                3 => self.list_data.right_resources[idx] = self.list_edit_buffer.clone(),
+                4 => self.list_data.lessons[idx] = self.list_edit_buffer.clone(),
                 _ => {}
             }
             self.save_data();
@@ -479,6 +492,7 @@ impl App {
         self.forced_four_mode = false;
         // clear array of used traits
         self.used_traits.clear();
+        self.additional_red_balls = [0, 0, 0, 0];
     }
 
     pub fn perform_first_draw(&mut self) {
@@ -551,18 +565,20 @@ impl App {
         } else if self.current_tab == 2 {
             // Tab 2 specific areas
             for idx in 0..4 {
-                if is_inside(x, y, &self.misfortunes_area[idx]) && !self.editing_list_item {
-                    self.selected_list_item = Some((0, idx));
+                if idx < 2 && is_inside(x, y, &self.resources_area[idx]) && !self.editing_list_item
+                {
+                    self.selected_list_item = Some((idx + 2, 0));
                 } else if idx < 3
                     && is_inside(x, y, &self.lections_area[idx])
                     && !self.editing_list_item
                 {
-                    self.selected_list_item = Some((3, idx));
-                } else if idx < 2
-                    && is_inside(x, y, &self.resources_area[idx])
+                    self.selected_list_item = Some((4, idx));
+                } else if is_inside(x, y, &self.misfortunes_area[idx]) && !self.editing_list_item {
+                    self.selected_list_item = Some((0, idx));
+                } else if is_inside(x, y, &self.misfortunes_red_balls_area[idx])
                     && !self.editing_list_item
                 {
-                    self.selected_list_item = Some((idx + 1, 0));
+                    self.selected_list_item = Some((1, idx));
                 }
             }
         }

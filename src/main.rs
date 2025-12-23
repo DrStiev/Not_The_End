@@ -135,8 +135,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             KeyCode::Char('r') | KeyCode::Char('R') => {
                                 app.reset();
                             }
-                            // select trait to use as token for next draw
                             KeyCode::Char('e') | KeyCode::Char('E') => {
+                                // select trait to use as token for next draw
                                 if app.current_tab == 1 && app.selected_node.is_some() {
                                     let idx = app.selected_node.unwrap();
                                     // check if not used then push and add token, otherwise remove and remove token
@@ -148,6 +148,27 @@ fn run_app<B: ratatui::backend::Backend>(
                                     } else {
                                         app.used_traits.push(idx);
                                         app.white_balls += 1;
+                                    }
+                                    // select additional difficulties
+                                } else if app.current_tab == 2 {
+                                    if let Some((section, idx)) = app.selected_list_item {
+                                        match section {
+                                            1 => {
+                                                let value = &app.list_data.misfortunes_red_balls
+                                                    [idx]
+                                                    .parse::<usize>()
+                                                    .unwrap_or(0); // obtain 0 if NaN
+                                                // check if not used then push and add token, otherwise remove and remove token
+                                                if app.additional_red_balls[idx] != 0 {
+                                                    app.red_balls -= app.additional_red_balls[idx];
+                                                    app.additional_red_balls[idx] = 0;
+                                                } else {
+                                                    app.additional_red_balls[idx] = *value;
+                                                    app.red_balls += app.additional_red_balls[idx];
+                                                }
+                                            }
+                                            _ => {}
+                                        }
                                     }
                                 }
                             }
@@ -178,12 +199,20 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 }
                                             }
                                             1 => {
-                                                app.selected_list_item = Some((2, 0));
+                                                if idx < 3 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx + 1));
+                                                } else {
+                                                    app.selected_list_item = Some((section + 1, 0));
+                                                }
                                             }
                                             2 => {
                                                 app.selected_list_item = Some((3, 0));
                                             }
                                             3 => {
+                                                app.selected_list_item = Some((4, 0));
+                                            }
+                                            4 => {
                                                 if idx < 2 {
                                                     app.selected_list_item =
                                                         Some((section, idx + 1));
@@ -238,21 +267,29 @@ fn run_app<B: ratatui::backend::Backend>(
                                                     app.selected_list_item =
                                                         Some((section, idx - 1));
                                                 } else {
-                                                    app.selected_list_item = Some((3, 2));
+                                                    app.selected_list_item = Some((4, 2));
                                                 }
                                             }
                                             1 => {
-                                                app.selected_list_item = Some((0, 3));
-                                            }
-                                            2 => {
-                                                app.selected_list_item = Some((1, 0));
-                                            }
-                                            3 => {
                                                 if idx > 0 {
                                                     app.selected_list_item =
                                                         Some((section, idx - 1));
                                                 } else {
-                                                    app.selected_list_item = Some((2, 0));
+                                                    app.selected_list_item = Some((0, 2));
+                                                }
+                                            }
+                                            2 => {
+                                                app.selected_list_item = Some((1, 3));
+                                            }
+                                            3 => {
+                                                app.selected_list_item = Some((2, 0));
+                                            }
+                                            4 => {
+                                                if idx > 0 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx - 1));
+                                                } else {
+                                                    app.selected_list_item = Some((3, 0));
                                                 }
                                             }
                                             _ => {}
@@ -318,7 +355,9 @@ fn run_app<B: ratatui::backend::Backend>(
                                 } else if app.current_tab == 2 {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            1 | 2 => {
+                                            0 => app.selected_list_item = Some((section + 1, idx)),
+                                            1 => app.selected_list_item = Some((section - 1, idx)),
+                                            2 | 3 => {
                                                 if idx > 0 {
                                                     app.selected_list_item =
                                                         Some((section, idx - 1));
@@ -393,7 +432,11 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                         FocusedSection::RedBalls => {
                                             if app.red_balls > 0 {
-                                                app.red_balls -= 1;
+                                                if app.red_balls
+                                                    > app.additional_red_balls.iter().sum()
+                                                {
+                                                    app.red_balls -= 1;
+                                                }
                                             }
                                         }
                                         FocusedSection::DrawInput => {
@@ -415,7 +458,9 @@ fn run_app<B: ratatui::backend::Backend>(
                                 } else if app.current_tab == 2 {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            1 | 2 => {
+                                            0 => app.selected_list_item = Some((section + 1, idx)),
+                                            1 => app.selected_list_item = Some((section - 1, idx)),
+                                            2 | 3 => {
                                                 app.selected_list_item =
                                                     Some((section, (idx + 1) % 5));
                                             }

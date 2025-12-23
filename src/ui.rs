@@ -603,6 +603,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(8), // Misfortunes
+            Constraint::Length(4), // Misfortunes Red Balls
             Constraint::Length(8), // Resources
             Constraint::Min(8),    // Lessons
         ])
@@ -621,10 +622,14 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     for i in 0..4 {
         let is_selected = app.selected_list_item == Some((0, i));
+        let is_misfortune_used = app.additional_red_balls[i] != 0;
+
         let style = if is_selected {
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD)
+        } else if is_misfortune_used {
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
         } else {
             Style::default()
         };
@@ -650,6 +655,55 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         f.render_widget(paragraph, misfortunes_layout[i]);
     }
 
+    // Misfortunes Red Balls section (4 zones)
+    let misfortunes_red_balls_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+        ])
+        .split(main_layout[1]);
+
+    for i in 0..4 {
+        let is_selected = app.selected_list_item == Some((1, i));
+        let is_misfortune_used = app.additional_red_balls[i] != 0;
+
+        let style = if is_selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else if is_misfortune_used {
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        let block = Block::default()
+            .title(" DIFFICOLTÀ ")
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .style(style);
+
+        let n = app.list_data.misfortunes_red_balls[i]
+            .parse::<usize>()
+            .unwrap_or(0); // obtain 0 if NaN
+        let text = if app.list_data.misfortunes_red_balls[i].is_empty() || n == 0 {
+            Line::from("[Vuoto]")
+        } else {
+            create_filled_balls_display(n, Color::Red)
+        };
+
+        let paragraph = Paragraph::new(text)
+            .block(block)
+            .wrap(Wrap { trim: true })
+            .alignment(Alignment::Center);
+
+        app.misfortunes_red_balls_area[i] = misfortunes_red_balls_layout[i];
+        f.render_widget(paragraph, misfortunes_red_balls_layout[i]);
+    }
+
     // Resources section (2 lists of 5)
     #[allow(unused_assignments)]
     let mut items: Vec<Line> = vec![
@@ -663,12 +717,12 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let resources_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(main_layout[1]);
+        .split(main_layout[2]);
 
     if let Some((section, _)) = app.selected_list_item {
         match section {
-            1 | 2 => {
-                style[section - 1] = Style::default()
+            2 | 3 => {
+                style[section - 2] = Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD);
             }
@@ -676,14 +730,14 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         }
     }
 
-    for j in 1..3 {
+    for j in 2..4 {
         let block = Block::default()
             .title(" Di quali RISORSE dispongo? ")
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(style[j - 1]);
+            .border_style(style[j - 2]);
 
-        if j == 1 {
+        if j == 2 {
             // modify left list
             items = app
                 .list_data
@@ -704,8 +758,8 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         }
 
         let paragraph = Paragraph::new(items).block(block);
-        app.resources_area[j - 1] = resources_layout[j - 1];
-        f.render_widget(paragraph, resources_layout[j - 1]);
+        app.resources_area[j - 2] = resources_layout[j - 2];
+        f.render_widget(paragraph, resources_layout[j - 2]);
     }
 
     // Lessons section (3 rectangles)
@@ -716,10 +770,10 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Percentage(34),
             Constraint::Percentage(33),
         ])
-        .split(main_layout[2]);
+        .split(main_layout[3]);
 
     for i in 0..3 {
-        let is_selected = app.selected_list_item == Some((3, i));
+        let is_selected = app.selected_list_item == Some((4, i));
         let style = if is_selected {
             Style::default()
                 .fg(Color::Yellow)
