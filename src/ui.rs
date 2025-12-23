@@ -573,6 +573,24 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
+fn render_list_items<'a>(
+    list_idx: usize,
+    item_idx: usize,
+    text: &'a String,
+    selected_list_item: Option<(usize, usize)>,
+) -> Line<'a> {
+    let is_selected = selected_list_item == Some((list_idx, item_idx));
+    let style = if is_selected {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    let content = if text.is_empty() { "[Vuoto]" } else { text };
+    Line::from(Span::styled(content, style))
+}
+
 fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -626,8 +644,15 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Resources section (2 lists of 5)
-    let mut style_left = Style::default();
-    let mut style_right = Style::default();
+    #[allow(unused_assignments)] 
+    let mut items: Vec<Line> = vec![
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+    ];
+    let mut style: [Style; 2] = [Style::default(), Style::default()];
     let resources_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -635,13 +660,8 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     if let Some((section, _)) = app.selected_list_item {
         match section {
-            1 => {
-                style_left = Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD);
-            }
-            2 => {
-                style_right = Style::default()
+            1 | 2 => {
+                style[section - 1] = Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD);
             }
@@ -649,65 +669,37 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         }
     }
 
-    // Left resources
-    let left_block = Block::default()
-        .title(" Di quali RISORSE dispongo? ")
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(style_left);
+    for j in 1..3 {
+        let block = Block::default()
+            .title(" Di quali RISORSE dispongo? ")
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(style[j - 1]);
 
-    let left_items: Vec<Line> = app
-        .list_data
-        .left_resources
-        .iter()
-        .enumerate()
-        .map(|(i, text)| {
-            let is_selected = app.selected_list_item == Some((1, i));
-            let style = if is_selected {
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-            let content = if text.is_empty() { "[Vuoto]" } else { text };
-            Line::from(Span::styled(content, style))
-        })
-        .collect();
+        if j == 1 {
+            // modify left list
+            items = app
+                .list_data
+                .left_resources
+                .iter()
+                .enumerate()
+                .map(|(i, text)| render_list_items(j, i, text, app.selected_list_item))
+                .collect();
+        } else {
+            // modify right list
+            items = app
+                .list_data
+                .right_resources
+                .iter()
+                .enumerate()
+                .map(|(i, text)| render_list_items(j, i, text, app.selected_list_item))
+                .collect();
+        }
 
-    let left_paragraph = Paragraph::new(left_items).block(left_block);
-    app.resources_area[0] = resources_layout[0];
-    f.render_widget(left_paragraph, resources_layout[0]);
-
-    // Right resources
-    let right_block = Block::default()
-        .title(" Di quali RISORSE dispongo? ")
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(style_right);
-
-    let right_items: Vec<Line> = app
-        .list_data
-        .right_resources
-        .iter()
-        .enumerate()
-        .map(|(i, text)| {
-            let is_selected = app.selected_list_item == Some((2, i));
-            let style = if is_selected {
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-            let content = if text.is_empty() { "[Vuoto]" } else { text };
-            Line::from(Span::styled(content, style))
-        })
-        .collect();
-
-    let right_paragraph = Paragraph::new(right_items).block(right_block);
-    app.resources_area[1] = resources_layout[1];
-    f.render_widget(right_paragraph, resources_layout[1]);
+        let paragraph = Paragraph::new(items).block(block);
+        app.resources_area[j - 1] = resources_layout[j - 1];
+        f.render_widget(paragraph, resources_layout[j - 1]);
+    }
 
     // Lessons section (3 rectangles)
     let lessons_layout = Layout::default()
@@ -748,6 +740,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
+#[allow(dead_code)]
 fn render_empty_tab(f: &mut Frame, area: Rect, title: &str) {
     let block = Block::default()
         .title(title)

@@ -22,14 +22,14 @@ impl fmt::Display for BallType {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PopupType {
     None,
     ConfirmDraw,
     ConfirmRisk,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FocusedSection {
     WhiteBalls,
     RedBalls,
@@ -113,6 +113,7 @@ impl Default for ListData {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct App {
     pub white_balls: usize,
     pub red_balls: usize,
@@ -149,7 +150,7 @@ pub struct App {
     pub forced_four_mode: bool,
     // List tab data
     pub list_data: ListData,
-    pub selected_list_item: Option<(usize, usize)>, // (section, index)
+    pub selected_list_item: Option<(usize, usize)>, // (section idx, item idx)
     pub editing_list_item: bool,
     pub list_edit_buffer: String,
 }
