@@ -740,20 +740,6 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
-#[allow(dead_code)]
-fn render_empty_tab(f: &mut Frame, area: Rect, title: &str) {
-    let block = Block::default()
-        .title(title)
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded);
-
-    let text = Paragraph::new("Contenuto in arrivo...")
-        .block(block)
-        .alignment(Alignment::Center);
-
-    f.render_widget(text, area);
-}
-
 fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let block = Block::default()
         .title(" Log - Cronologia Prove (↑/↓ per scorrere) ")
