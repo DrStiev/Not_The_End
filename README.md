@@ -1,6 +1,6 @@
 # Not The End – Local TUI Game Helper
 
-Un helper locale basato su terminale per giocare a **Not the End**, il TTRPG narrativo di Claudio Pastorino, quando non è possibile giocare dal vivo.
+Un helper locale basato su terminale per giocare a **Not the End**, il TTRPG narrativo di Claudio Pustorino, quando non è possibile giocare dal vivo.
 
 Il progetto cerca di preservare il più possibile il flusso narrativo e la fisicità del gioco, offrendo un’interfaccia leggera, locale e priva di distrazioni.
 
@@ -98,7 +98,7 @@ Feedback, suggerimenti e contributi sono benvenuti.
 
 ## Crediti 
 
-- Not the End — Claudio Pastorino
+- Not the End — Claudio Pustorino
 
 - Ratatui — framework TUI per Rust
 
