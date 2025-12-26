@@ -79,6 +79,10 @@ fn run_app<B: ratatui::backend::Backend>(
                             match app.current_tab {
                                 TabType::CharacterSheetTab => {
                                     if let Some(idx) = app.selected_node {
+                                        // ignore empty node
+                                        if app.honeycomb_nodes[idx].text.is_empty() {
+                                            continue;
+                                        }
                                         // check if not used then push and add token, otherwise remove and remove token
                                         if app.used_traits.contains(&idx) {
                                             let _ = app.used_traits.swap_remove(
@@ -99,12 +103,16 @@ fn run_app<B: ratatui::backend::Backend>(
                                         match section {
                                             ListSection::Misfortunes
                                             | ListSection::MisfortunesDifficult => {
+                                                // if misfortune is empty, ignore it
+                                                if app.list_data.misfortunes[idx].is_empty() {
+                                                    continue;
+                                                }
                                                 let value = &app.list_data.misfortunes_red_balls
                                                     [idx]
                                                     .trim()
                                                     .parse::<usize>()
                                                     .unwrap_or(0); // obtain 0 if NaN
-                                                // check if not used then push and add token, otherwise remove and remove token
+                                                // check if not used then push and add token, otherwise remove token
                                                 if app.additional_red_balls[idx] != 0 {
                                                     app.red_balls -= app.additional_red_balls[idx];
                                                     app.additional_red_balls[idx] = 0;
