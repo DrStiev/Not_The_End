@@ -131,12 +131,11 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Char(c) => {
                             if app.editing_node && app.node_edit_buffer.len() < 35 {
                                 app.node_edit_buffer.push(c);
-                            } else if app.editing_list_item {
-                                if app.list_edit_buffer.len()
+                            } else if app.editing_list_item
+                                && app.list_edit_buffer.len()
                                     < get_list_item_length(app.selected_list_item)
-                                {
-                                    app.list_edit_buffer.push(c);
-                                }
+                            {
+                                app.list_edit_buffer.push(c);
                             }
                         }
                         KeyCode::Backspace => {
@@ -204,7 +203,6 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Tab => {
                             // total number of tabs = 4
                             app.current_tab = app.current_tab.next();
-                            // get_tab_type((get_idx_from_tab(app.current_tab) + 1) % 4);
                         }
                         // moving through element of tab
                         KeyCode::Right => match app.current_tab {
