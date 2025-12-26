@@ -22,20 +22,65 @@ impl fmt::Display for BallType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PopupType {
     None,
     ConfirmDraw,
     ConfirmRisk,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TabType {
+    DrawTab,
+    CharacterSheetTab,
+    AdditionalInfoTab,
+    LogTab,
+    None, // default
+}
+
+impl TabType {
+    pub fn next(&self) -> Self {
+        use TabType::*;
+        match *self {
+            DrawTab => CharacterSheetTab,
+            CharacterSheetTab => AdditionalInfoTab,
+            AdditionalInfoTab => LogTab,
+            LogTab => DrawTab,
+            _ => DrawTab,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FocusedSection {
     WhiteBalls,
     RedBalls,
     DrawInput,
     RandomMode,
     ForcedFour,
+}
+
+impl FocusedSection {
+    pub fn next(&self) -> Self {
+        use FocusedSection::*;
+        match *self {
+            WhiteBalls => RedBalls,
+            RedBalls => RandomMode,
+            DrawInput => WhiteBalls,
+            RandomMode => ForcedFour,
+            ForcedFour => DrawInput,
+        }
+    }
+    pub fn prev(&self) -> Self {
+        use FocusedSection::*;
+        match *self {
+            WhiteBalls => DrawInput,
+            RedBalls => WhiteBalls,
+            DrawInput => ForcedFour,
+            RandomMode => RedBalls,
+            ForcedFour => RandomMode,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -127,7 +172,7 @@ pub struct App {
     pub drawn_balls: Vec<BallType>,
     // pub first_draw_complete: bool,
     pub pool: Vec<BallType>,
-    pub current_tab: usize,
+    pub current_tab: TabType,
     // Log data
     pub history: Vec<DrawHistory>,
     pub current_first_draw: Vec<BallType>,
@@ -176,7 +221,7 @@ impl App {
             drawn_balls: Vec::new(),
             // first_draw_complete: false,
             pool: Vec::new(),
-            current_tab: 0,
+            current_tab: TabType::DrawTab,
             // Log data
             history: Vec::new(),
             current_first_draw: Vec::new(),
@@ -331,7 +376,7 @@ impl App {
     }
 
     pub fn handle_node_click(&mut self, x: u16, y: u16, graph_area: &Rect) {
-        if self.current_tab != 1 || self.editing_node {
+        if self.current_tab != TabType::CharacterSheetTab || self.editing_node {
             return;
         }
 
@@ -555,46 +600,79 @@ impl App {
         // Check tab clicks
         for (i, area) in self.tab_areas.iter().enumerate() {
             if is_inside(x, y, area) {
-                self.current_tab = i;
+                self.current_tab = get_tab_type(i);
                 return;
             }
         }
 
-        // Tab 0 specific areas
-        if self.current_tab == 0 {
-            if is_inside(x, y, &self.white_balls_area) {
-                self.focused_section = FocusedSection::WhiteBalls;
-            } else if is_inside(x, y, &self.red_balls_area) {
-                self.focused_section = FocusedSection::RedBalls;
-            } else if is_inside(x, y, &self.draw_input_area) {
-                self.focused_section = FocusedSection::DrawInput;
-            } else if is_inside(x, y, &self.random_mode_area) {
-                self.random_mode = !self.random_mode;
-            } else if is_inside(x, y, &self.forced_four_area) {
-                self.forced_four_mode = !self.forced_four_mode;
-                if self.forced_four_mode {
-                    self.draw_count = 4;
-                } else {
-                    self.draw_count = 1;
-                }
-            }
-        } else if self.current_tab == 2 {
-            // Tab 2 specific areas
-            for idx in 0..4 {
-                // ignore mouse click if I'm in editing mode
-                if !self.editing_list_item {
-                    if idx < 2 && is_inside(x, y, &self.resources_area[idx]) {
-                        self.selected_list_item = Some((idx + 2, 0));
-                    } else if idx < 3 && is_inside(x, y, &self.lections_area[idx]) {
-                        self.selected_list_item = Some((4, idx));
-                    } else if is_inside(x, y, &self.misfortunes_area[idx]) {
-                        self.selected_list_item = Some((0, idx));
-                    } else if is_inside(x, y, &self.misfortunes_red_balls_area[idx]) {
-                        self.selected_list_item = Some((1, idx));
+        match self.current_tab {
+            TabType::DrawTab => {
+                if is_inside(x, y, &self.white_balls_area) {
+                    self.focused_section = FocusedSection::WhiteBalls;
+                } else if is_inside(x, y, &self.red_balls_area) {
+                    self.focused_section = FocusedSection::RedBalls;
+                } else if is_inside(x, y, &self.draw_input_area) {
+                    self.focused_section = FocusedSection::DrawInput;
+                } else if is_inside(x, y, &self.random_mode_area) {
+                    self.random_mode = !self.random_mode;
+                } else if is_inside(x, y, &self.forced_four_area) {
+                    self.forced_four_mode = !self.forced_four_mode;
+                    if self.forced_four_mode {
+                        self.draw_count = 4;
+                    } else {
+                        self.draw_count = 1;
                     }
                 }
             }
+            TabType::AdditionalInfoTab => {
+                // Tab 2 specific areas
+                for idx in 0..4 {
+                    // ignore mouse click if I'm in editing mode
+                    if !self.editing_list_item {
+                        if idx < 2 && is_inside(x, y, &self.resources_area[idx]) {
+                            self.selected_list_item = Some((idx + 2, 0));
+                        } else if idx < 3 && is_inside(x, y, &self.lections_area[idx]) {
+                            self.selected_list_item = Some((4, idx));
+                        } else if is_inside(x, y, &self.misfortunes_area[idx]) {
+                            self.selected_list_item = Some((0, idx));
+                        } else if is_inside(x, y, &self.misfortunes_red_balls_area[idx]) {
+                            self.selected_list_item = Some((1, idx));
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
+    }
+}
+
+pub fn get_tab_type(idx: usize) -> TabType {
+    match idx {
+        0 => TabType::DrawTab,
+        1 => TabType::CharacterSheetTab,
+        2 => TabType::AdditionalInfoTab,
+        3 => TabType::LogTab,
+        _ => TabType::None,
+    }
+}
+
+pub fn get_idx_from_tab(tab: TabType) -> usize {
+    match tab {
+        TabType::DrawTab => 0,
+        TabType::CharacterSheetTab => 1,
+        TabType::AdditionalInfoTab => 2,
+        TabType::LogTab => 3,
+        TabType::None => 0, // if not valid return 0 as default
+    }
+}
+
+pub fn get_list_item_length(item: Option<(usize, usize)>) -> usize {
+    match item {
+        Some((0, _)) => 50,                // Misfortunes
+        Some((1, _)) => 2,                 // Misfortunes Difficulties
+        Some((2, _)) | Some((3, _)) => 75, // Resources
+        Some((4, _)) => 500,               // Lessons
+        _ => 0,                            // others
     }
 }
 

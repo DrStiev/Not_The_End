@@ -11,7 +11,7 @@ use std::io;
 
 // include module ui.rs
 mod app;
-use crate::app::{App, FocusedSection, PopupType};
+use crate::app::{App, FocusedSection, PopupType, TabType, get_list_item_length};
 
 mod ui;
 use crate::ui::ui;
@@ -58,104 +58,46 @@ fn run_app<B: ratatui::backend::Backend>(
             // Controlla se evento e' un KeyDown non un KeyRelease
             Event::Key(key) => {
                 if key.kind == KeyEventKind::Press {
-                    // editing honeycomb node
-                    if app.editing_node {
-                        match key.code {
-                            KeyCode::Esc => {
+                    match key.code {
+                        KeyCode::Esc => {
+                            if app.editing_node {
                                 app.finish_node_editing();
-                            }
-                            KeyCode::Char(c) => {
-                                if app.node_edit_buffer.len() < 35 {
-                                    app.node_edit_buffer.push(c);
-                                }
-                            }
-                            KeyCode::Backspace => {
-                                app.node_edit_buffer.pop();
-                            }
-                            _ => {}
-                        }
-                        continue;
-                    }
-                    if app.editing_list_item {
-                        // editing 3rd tab
-                        match key.code {
-                            KeyCode::Esc => {
+                            } else if app.editing_list_item {
                                 app.finish_list_editing();
+                            } else if app.popup == PopupType::ConfirmRisk {
+                                app.cancel_draw();
                             }
-                            KeyCode::Char(c) => {
-                                let max_len = match app.selected_list_item {
-                                    Some((0, _)) => 50,                // Misfortunes
-                                    Some((1, _)) => 2,                 // Misfortunes Difficulties
-                                    Some((2, _)) | Some((3, _)) => 75, // Resources
-                                    Some((4, _)) => 500,               // Lessons
-                                    _ => 0,                            // others
-                                };
-                                if app.list_edit_buffer.len() < max_len {
-                                    app.list_edit_buffer.push(c);
-                                }
-                            }
-                            KeyCode::Enter => {
-                                let max_len = match app.selected_list_item {
-                                    Some((0, _)) => 50,                // Misfortunes
-                                    Some((1, _)) => 2,                 // Misfortunes Difficulties
-                                    Some((2, _)) | Some((3, _)) => 75, // Resources
-                                    Some((4, _)) => 500,               // Lessons
-                                    _ => 0,                            // others
-                                };
-                                if app.list_edit_buffer.len() < max_len {
-                                    app.list_edit_buffer.push('\n');
-                                }
-                            }
-                            KeyCode::Backspace => {
-                                app.list_edit_buffer.pop();
-                            }
-                            _ => {}
+                            app.popup = PopupType::None;
                         }
-                        continue;
-                    }
-                    if app.popup != PopupType::None {
-                        match key.code {
-                            KeyCode::Enter => {
-                                if app.popup == PopupType::ConfirmDraw {
-                                    app.perform_first_draw();
-                                } else if app.popup == PopupType::ConfirmRisk {
-                                    app.perform_risk_draw();
-                                }
-                            }
-                            KeyCode::Esc => {
-                                if app.popup == PopupType::ConfirmRisk {
-                                    app.cancel_draw();
-                                }
-                                app.popup = PopupType::None;
-                            }
-                            _ => {}
+                        // quit or reset
+                        KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(()),
+                        KeyCode::Char('r') | KeyCode::Char('R') => {
+                            app.reset();
                         }
-                    } else {
-                        match key.code {
-                            // quit or reset
-                            KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(()),
-                            KeyCode::Char('r') | KeyCode::Char('R') => {
-                                app.reset();
-                            }
-                            KeyCode::Char('e') | KeyCode::Char('E') => {
-                                // select trait to use as token for next draw
-                                if app.current_tab == 1 && app.selected_node.is_some() {
-                                    let idx = app.selected_node.unwrap();
-                                    // check if not used then push and add token, otherwise remove and remove token
-                                    if app.used_traits.contains(&idx) {
-                                        let _ = app.used_traits.swap_remove(
-                                            app.used_traits.iter().position(|n| *n == idx).unwrap(),
-                                        );
-                                        app.white_balls -= 1;
-                                    } else {
-                                        app.used_traits.push(idx);
-                                        app.white_balls += 1;
+                        KeyCode::Char('e') | KeyCode::Char('E') => {
+                            // select trait to use as token for next draw
+                            match app.current_tab {
+                                TabType::CharacterSheetTab => {
+                                    if let Some(idx) = app.selected_node {
+                                        // check if not used then push and add token, otherwise remove and remove token
+                                        if app.used_traits.contains(&idx) {
+                                            let _ = app.used_traits.swap_remove(
+                                                app.used_traits
+                                                    .iter()
+                                                    .position(|n| *n == idx)
+                                                    .unwrap(),
+                                            );
+                                            app.white_balls -= 1;
+                                        } else {
+                                            app.used_traits.push(idx);
+                                            app.white_balls += 1;
+                                        }
                                     }
-                                    // select additional difficulties
-                                } else if app.current_tab == 2 {
+                                }
+                                TabType::AdditionalInfoTab => {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            1 => {
+                                            0 | 1 => {
                                                 let value = &app.list_data.misfortunes_red_balls
                                                     [idx]
                                                     .trim()
@@ -174,147 +116,211 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                     }
                                 }
+                                _ => {}
                             }
-                            // moving through tab
-                            KeyCode::Tab => {
-                                // total number of tabs = 4
-                                app.current_tab = (app.current_tab + 1) % 4;
+                        }
+                        KeyCode::Char(c) => {
+                            if app.editing_node && app.node_edit_buffer.len() < 35 {
+                                app.node_edit_buffer.push(c);
+                            } else if app.editing_list_item {
+                                if app.list_edit_buffer.len()
+                                    < get_list_item_length(app.selected_list_item)
+                                {
+                                    app.list_edit_buffer.push(c);
+                                }
                             }
-                            // moving through element of tab
-                            KeyCode::Right => {
-                                if app.current_tab == 0 {
-                                    app.focused_section = match app.focused_section {
-                                        FocusedSection::WhiteBalls => FocusedSection::RedBalls,
-                                        FocusedSection::RedBalls => FocusedSection::RandomMode,
-                                        FocusedSection::RandomMode => FocusedSection::ForcedFour,
-                                        FocusedSection::ForcedFour => FocusedSection::DrawInput,
-                                        FocusedSection::DrawInput => FocusedSection::WhiteBalls,
-                                    };
-                                } else if app.current_tab == 2 {
-                                    if let Some((section, idx)) = app.selected_list_item {
-                                        match section {
-                                            0 => {
-                                                if idx < 3 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx + 1));
-                                                } else {
-                                                    app.selected_list_item = Some((section + 1, 0));
+                        }
+                        KeyCode::Backspace => {
+                            if app.editing_node {
+                                app.node_edit_buffer.pop();
+                            } else if app.editing_list_item {
+                                app.list_edit_buffer.pop();
+                            }
+                        }
+                        KeyCode::Enter => {
+                            match app.popup {
+                                PopupType::ConfirmDraw => {
+                                    app.perform_first_draw();
+                                }
+                                PopupType::ConfirmRisk => {
+                                    app.perform_risk_draw();
+                                }
+                                PopupType::None => {
+                                    match app.current_tab {
+                                        TabType::DrawTab => {
+                                            match app.focused_section {
+                                                FocusedSection::DrawInput => {
+                                                    // perform draw iff there are tokens to be drawn
+                                                    if app.white_balls > 0 && app.red_balls > 0 {
+                                                        app.popup = PopupType::ConfirmDraw;
+                                                    }
                                                 }
-                                            }
-                                            1 => {
-                                                if idx < 3 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx + 1));
-                                                } else {
-                                                    app.selected_list_item = Some((section + 1, 0));
+                                                FocusedSection::ForcedFour => {
+                                                    app.forced_four_mode = !app.forced_four_mode;
+                                                    if app.forced_four_mode {
+                                                        app.draw_count = 4;
+                                                    } else {
+                                                        app.draw_count = 1;
+                                                    }
                                                 }
+                                                FocusedSection::RandomMode => {
+                                                    app.random_mode = !app.random_mode;
+                                                }
+                                                _ => {}
                                             }
-                                            2 => {
+                                        }
+                                        TabType::CharacterSheetTab => {
+                                            // this section do not need to handle '\n' character
+                                            if app.selected_node.is_some() && !app.editing_node {
+                                                app.start_node_editing();
+                                            }
+                                        }
+                                        TabType::AdditionalInfoTab => {
+                                            if app.editing_list_item {
+                                                if app.list_edit_buffer.len()
+                                                    < get_list_item_length(app.selected_list_item)
+                                                {
+                                                    app.list_edit_buffer.push('\n');
+                                                }
+                                            } else if app.selected_list_item.is_some() {
+                                                app.start_list_editing();
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                        }
+                        // moving through tab
+                        KeyCode::Tab => {
+                            // total number of tabs = 4
+                            app.current_tab = app.current_tab.next();
+                            // get_tab_type((get_idx_from_tab(app.current_tab) + 1) % 4);
+                        }
+                        // moving through element of tab
+                        KeyCode::Right => match app.current_tab {
+                            TabType::DrawTab => {
+                                app.focused_section = app.focused_section.next();
+                            }
+                            TabType::CharacterSheetTab => {
+                                if let Some(idx) = app.selected_node {
+                                    match idx {
+                                        0..7 | 11..13 => {
+                                            app.selected_node = Some(idx + 4);
+                                        }
+                                        7..11 => {
+                                            app.selected_node = Some(idx + 5);
+                                        }
+                                        13..16 => {
+                                            app.selected_node = Some(idx + 3);
+                                        }
+                                        16..19 => {
+                                            app.selected_node = Some(idx - 16);
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            TabType::AdditionalInfoTab => {
+                                if let Some((section, idx)) = app.selected_list_item {
+                                    match section {
+                                        0 => {
+                                            if idx < 3 {
+                                                app.selected_list_item = Some((section, idx + 1));
+                                            } else {
+                                                app.selected_list_item = Some((section + 1, 0));
+                                            }
+                                        }
+                                        1 => {
+                                            if idx < 3 {
+                                                app.selected_list_item = Some((section, idx + 1));
+                                            } else {
+                                                app.selected_list_item = Some((section + 1, 0));
+                                            }
+                                        }
+                                        2 => {
+                                            app.selected_list_item = Some((3, 0));
+                                        }
+                                        3 => {
+                                            app.selected_list_item = Some((4, 0));
+                                        }
+                                        4 => {
+                                            if idx < 2 {
+                                                app.selected_list_item = Some((section, idx + 1));
+                                            } else {
+                                                app.selected_list_item = Some((0, 0));
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            _ => {}
+                        },
+                        // moving through element of tab
+                        KeyCode::Left => match app.current_tab {
+                            TabType::DrawTab => {
+                                app.focused_section = app.focused_section.prev();
+                            }
+                            TabType::CharacterSheetTab => {
+                                if let Some(idx) = app.selected_node {
+                                    match idx {
+                                        6..8 | 12..19 => {
+                                            app.selected_node = Some(idx - 4);
+                                        }
+                                        8..12 => {
+                                            app.selected_node = Some(idx - 5);
+                                        }
+                                        3..6 => {
+                                            app.selected_node = Some(idx - 3);
+                                        }
+                                        0..3 => {
+                                            app.selected_node = Some(idx + 16);
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            TabType::AdditionalInfoTab => {
+                                if let Some((section, idx)) = app.selected_list_item {
+                                    match section {
+                                        0 => {
+                                            if idx > 0 {
+                                                app.selected_list_item = Some((section, idx - 1));
+                                            } else {
+                                                app.selected_list_item = Some((4, 2));
+                                            }
+                                        }
+                                        1 => {
+                                            if idx > 0 {
+                                                app.selected_list_item = Some((section, idx - 1));
+                                            } else {
+                                                app.selected_list_item = Some((0, 2));
+                                            }
+                                        }
+                                        2 => {
+                                            app.selected_list_item = Some((1, 3));
+                                        }
+                                        3 => {
+                                            app.selected_list_item = Some((2, 0));
+                                        }
+                                        4 => {
+                                            if idx > 0 {
+                                                app.selected_list_item = Some((section, idx - 1));
+                                            } else {
                                                 app.selected_list_item = Some((3, 0));
                                             }
-                                            3 => {
-                                                app.selected_list_item = Some((4, 0));
-                                            }
-                                            4 => {
-                                                if idx < 2 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx + 1));
-                                                } else {
-                                                    app.selected_list_item = Some((0, 0));
-                                                }
-                                            }
-                                            _ => {}
                                         }
-                                    }
-                                } else if app.current_tab == 1 {
-                                    if let Some(idx) = app.selected_node {
-                                        match idx {
-                                            0..7 | 11..13 => {
-                                                app.selected_node = Some(idx + 4);
-                                            }
-                                            7..11 => {
-                                                app.selected_node = Some(idx + 5);
-                                            }
-                                            13..16 => {
-                                                app.selected_node = Some(idx + 3);
-                                            }
-                                            16..19 => {
-                                                app.selected_node = Some(idx - 16);
-                                            }
-                                            _ => {}
-                                        }
+                                        _ => {}
                                     }
                                 }
                             }
-                            // moving through element of tab
-                            KeyCode::Left => {
-                                if app.current_tab == 0 {
-                                    app.focused_section = match app.focused_section {
-                                        FocusedSection::WhiteBalls => FocusedSection::DrawInput,
-                                        FocusedSection::RedBalls => FocusedSection::WhiteBalls,
-                                        FocusedSection::RandomMode => FocusedSection::RedBalls,
-                                        FocusedSection::ForcedFour => FocusedSection::RandomMode,
-                                        FocusedSection::DrawInput => FocusedSection::ForcedFour,
-                                    };
-                                } else if app.current_tab == 2 {
-                                    if let Some((section, idx)) = app.selected_list_item {
-                                        match section {
-                                            0 => {
-                                                if idx > 0 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx - 1));
-                                                } else {
-                                                    app.selected_list_item = Some((4, 2));
-                                                }
-                                            }
-                                            1 => {
-                                                if idx > 0 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx - 1));
-                                                } else {
-                                                    app.selected_list_item = Some((0, 2));
-                                                }
-                                            }
-                                            2 => {
-                                                app.selected_list_item = Some((1, 3));
-                                            }
-                                            3 => {
-                                                app.selected_list_item = Some((2, 0));
-                                            }
-                                            4 => {
-                                                if idx > 0 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx - 1));
-                                                } else {
-                                                    app.selected_list_item = Some((3, 0));
-                                                }
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                } else if app.current_tab == 1 {
-                                    if let Some(idx) = app.selected_node {
-                                        match idx {
-                                            6..8 | 12..19 => {
-                                                app.selected_node = Some(idx - 4);
-                                            }
-                                            8..12 => {
-                                                app.selected_node = Some(idx - 5);
-                                            }
-                                            3..6 => {
-                                                app.selected_node = Some(idx - 3);
-                                            }
-                                            0..3 => {
-                                                app.selected_node = Some(idx + 16);
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                }
-                            }
-                            // editing first tab tokens
-                            KeyCode::Up => {
-                                if app.current_tab == 0 {
+                            _ => {}
+                        },
+                        // editing first tab tokens
+                        KeyCode::Up => {
+                            match app.current_tab {
+                                TabType::DrawTab => {
                                     match app.focused_section {
                                         FocusedSection::WhiteBalls => {
                                             // 20 token as hard cap
@@ -335,32 +341,8 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                         _ => {}
                                     }
-                                    // scroll logs
-                                } else if app.current_tab == 3 {
-                                    if app.vertical_scroll > 0 {
-                                        app.vertical_scroll -= 1;
-                                        app.vertical_scroll_state =
-                                            app.vertical_scroll_state.position(app.vertical_scroll);
-                                    }
-                                    // move through list item of 3rd tab
-                                } else if app.current_tab == 2 {
-                                    if let Some((section, idx)) = app.selected_list_item {
-                                        match section {
-                                            0 => app.selected_list_item = Some((section + 1, idx)),
-                                            1 => app.selected_list_item = Some((section - 1, idx)),
-                                            2 | 3 => {
-                                                if idx > 0 {
-                                                    app.selected_list_item =
-                                                        Some((section, idx - 1));
-                                                } else {
-                                                    app.selected_list_item =
-                                                        Some((section, 4 - idx));
-                                                }
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                } else if app.current_tab == 1 {
+                                }
+                                TabType::CharacterSheetTab => {
                                     if let Some(idx) = app.selected_node {
                                         match idx {
                                             // first column
@@ -407,10 +389,38 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                     }
                                 }
+                                TabType::AdditionalInfoTab => {
+                                    if let Some((section, idx)) = app.selected_list_item {
+                                        match section {
+                                            0 => app.selected_list_item = Some((section + 1, idx)),
+                                            1 => app.selected_list_item = Some((section - 1, idx)),
+                                            2 | 3 => {
+                                                if idx > 0 {
+                                                    app.selected_list_item =
+                                                        Some((section, idx - 1));
+                                                } else {
+                                                    app.selected_list_item =
+                                                        Some((section, 4 - idx));
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                                TabType::LogTab => {
+                                    if app.vertical_scroll > 0 {
+                                        app.vertical_scroll -= 1;
+                                        app.vertical_scroll_state =
+                                            app.vertical_scroll_state.position(app.vertical_scroll);
+                                    }
+                                }
+                                _ => {}
                             }
-                            // editing first tab tokens
-                            KeyCode::Down => {
-                                if app.current_tab == 0 {
+                        }
+                        // editing first tab tokens
+                        KeyCode::Down => {
+                            match app.current_tab {
+                                TabType::DrawTab => {
                                     match app.focused_section {
                                         FocusedSection::WhiteBalls => {
                                             if app.white_balls > 0 {
@@ -437,28 +447,8 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                         _ => {}
                                     }
-                                    // scroll logs
-                                } else if app.current_tab == 3 {
-                                    let max_scroll = (app.history.len() * 13).saturating_sub(10);
-                                    if app.vertical_scroll < max_scroll {
-                                        app.vertical_scroll += 1;
-                                        app.vertical_scroll_state =
-                                            app.vertical_scroll_state.position(app.vertical_scroll);
-                                    }
-                                    // move through list item of 3rd tab
-                                } else if app.current_tab == 2 {
-                                    if let Some((section, idx)) = app.selected_list_item {
-                                        match section {
-                                            0 => app.selected_list_item = Some((section + 1, idx)),
-                                            1 => app.selected_list_item = Some((section - 1, idx)),
-                                            2 | 3 => {
-                                                app.selected_list_item =
-                                                    Some((section, (idx + 1) % 5));
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                } else if app.current_tab == 1 {
+                                }
+                                TabType::CharacterSheetTab => {
                                     if let Some(idx) = app.selected_node {
                                         match idx {
                                             // first column
@@ -501,37 +491,35 @@ fn run_app<B: ratatui::backend::Backend>(
                                         }
                                     }
                                 }
-                            }
-                            KeyCode::Enter => {
-                                if app.current_tab == 0 {
-                                    if app.focused_section == FocusedSection::DrawInput
-                                    // && !app.first_draw_complete
-                                    {
-                                        // perform draw iff there are tokens to be drawn
-                                        if app.white_balls > 0 && app.red_balls > 0 {
-                                            app.popup = PopupType::ConfirmDraw;
+                                TabType::AdditionalInfoTab => {
+                                    if let Some((section, idx)) = app.selected_list_item {
+                                        match section {
+                                            0 => app.selected_list_item = Some((section + 1, idx)),
+                                            1 => app.selected_list_item = Some((section - 1, idx)),
+                                            2 | 3 => {
+                                                app.selected_list_item =
+                                                    Some((section, (idx + 1) % 5));
+                                            }
+                                            _ => {}
                                         }
-                                    } else if app.focused_section == FocusedSection::ForcedFour {
-                                        app.forced_four_mode = !app.forced_four_mode;
-                                        if app.forced_four_mode {
-                                            app.draw_count = 4;
-                                        } else {
-                                            app.draw_count = 1;
-                                        }
-                                    } else if app.focused_section == FocusedSection::RandomMode {
-                                        app.random_mode = !app.random_mode;
                                     }
-                                } else if app.current_tab == 1 && app.selected_node.is_some() {
-                                    app.start_node_editing();
-                                } else if app.current_tab == 2 && app.selected_list_item.is_some() {
-                                    app.start_list_editing();
                                 }
+                                TabType::LogTab => {
+                                    let max_scroll = (app.history.len() * 13).saturating_sub(10);
+                                    if app.vertical_scroll < max_scroll {
+                                        app.vertical_scroll += 1;
+                                        app.vertical_scroll_state =
+                                            app.vertical_scroll_state.position(app.vertical_scroll);
+                                    }
+                                }
+                                _ => {}
                             }
-                            _ => {}
                         }
+                        _ => {}
                     }
                 }
             }
+
             Event::Mouse(mouse) => {
                 if app.popup != PopupType::None || app.editing_node || app.editing_list_item {
                     continue;
@@ -541,7 +529,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     MouseEventKind::Down(MouseButton::Left) => {
                         app.handle_mouse_click(mouse.column, mouse.row);
                         // Also check for node clicks in graph tab
-                        if app.current_tab == 1 {
+                        if app.current_tab == TabType::CharacterSheetTab {
                             app.handle_node_click(mouse.column, mouse.row, &app.graph_area.clone());
                         }
                     }

@@ -8,7 +8,7 @@ use ratatui::{
     },
 };
 
-use super::app::{App, BallType, FocusedSection, PopupType};
+use super::app::{App, BallType, FocusedSection, PopupType, TabType, get_idx_from_tab};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -25,7 +25,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 .border_type(BorderType::Rounded)
                 .title(" Menù (Tab) "),
         )
-        .select(app.current_tab)
+        .select(get_idx_from_tab(app.current_tab))
         .style(Style::default().fg(Color::White))
         .highlight_style(
             Style::default()
@@ -59,10 +59,10 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     // Content based on selected tab
     match app.current_tab {
-        0 => render_draw_tab(f, chunks[1], app),
-        1 => render_graph_tab(f, chunks[1], app),
-        2 => render_list_tab(f, chunks[1], app),
-        3 => render_history_tab(f, chunks[1], app),
+        TabType::DrawTab => render_draw_tab(f, chunks[1], app),
+        TabType::CharacterSheetTab => render_graph_tab(f, chunks[1], app),
+        TabType::AdditionalInfoTab => render_list_tab(f, chunks[1], app),
+        TabType::LogTab => render_history_tab(f, chunks[1], app),
         _ => {}
     }
 
