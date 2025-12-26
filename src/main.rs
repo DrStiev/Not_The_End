@@ -11,7 +11,7 @@ use std::io;
 
 // include module ui.rs
 mod app;
-use crate::app::{App, FocusedSection, PopupType, TabType, get_list_item_length};
+use crate::app::{App, FocusedSection, ListSection, PopupType, TabType, get_list_item_length};
 
 mod ui;
 use crate::ui::ui;
@@ -97,7 +97,8 @@ fn run_app<B: ratatui::backend::Backend>(
                                 TabType::AdditionalInfoTab => {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            0 | 1 => {
+                                            ListSection::Misfortunes
+                                            | ListSection::MisfortunesDifficult => {
                                                 let value = &app.list_data.misfortunes_red_balls
                                                     [idx]
                                                     .trim()
@@ -224,34 +225,33 @@ fn run_app<B: ratatui::backend::Backend>(
                             TabType::AdditionalInfoTab => {
                                 if let Some((section, idx)) = app.selected_list_item {
                                     match section {
-                                        0 => {
+                                        ListSection::Misfortunes => {
                                             if idx < 3 {
                                                 app.selected_list_item = Some((section, idx + 1));
                                             } else {
-                                                app.selected_list_item = Some((section + 1, 0));
+                                                app.selected_list_item = Some((section.next(), 0));
                                             }
                                         }
-                                        1 => {
+                                        ListSection::MisfortunesDifficult => {
                                             if idx < 3 {
                                                 app.selected_list_item = Some((section, idx + 1));
                                             } else {
-                                                app.selected_list_item = Some((section + 1, 0));
+                                                app.selected_list_item = Some((section.next(), 0));
                                             }
                                         }
-                                        2 => {
-                                            app.selected_list_item = Some((3, 0));
+                                        ListSection::LxResources => {
+                                            app.selected_list_item = Some((section.next(), 0));
                                         }
-                                        3 => {
-                                            app.selected_list_item = Some((4, 0));
+                                        ListSection::RxResources => {
+                                            app.selected_list_item = Some((section.next(), 0));
                                         }
-                                        4 => {
+                                        ListSection::Lessons => {
                                             if idx < 2 {
                                                 app.selected_list_item = Some((section, idx + 1));
                                             } else {
-                                                app.selected_list_item = Some((0, 0));
+                                                app.selected_list_item = Some((section.next(), 0));
                                             }
                                         }
-                                        _ => {}
                                     }
                                 }
                             }
@@ -284,34 +284,33 @@ fn run_app<B: ratatui::backend::Backend>(
                             TabType::AdditionalInfoTab => {
                                 if let Some((section, idx)) = app.selected_list_item {
                                     match section {
-                                        0 => {
+                                        ListSection::Misfortunes => {
                                             if idx > 0 {
                                                 app.selected_list_item = Some((section, idx - 1));
                                             } else {
-                                                app.selected_list_item = Some((4, 2));
+                                                app.selected_list_item = Some((section.prev(), 2));
                                             }
                                         }
-                                        1 => {
+                                        ListSection::MisfortunesDifficult => {
                                             if idx > 0 {
                                                 app.selected_list_item = Some((section, idx - 1));
                                             } else {
-                                                app.selected_list_item = Some((0, 2));
+                                                app.selected_list_item = Some((section.prev(), 2));
                                             }
                                         }
-                                        2 => {
-                                            app.selected_list_item = Some((1, 3));
+                                        ListSection::LxResources => {
+                                            app.selected_list_item = Some((section.prev(), 3));
                                         }
-                                        3 => {
-                                            app.selected_list_item = Some((2, 0));
+                                        ListSection::RxResources => {
+                                            app.selected_list_item = Some((section.prev(), 0));
                                         }
-                                        4 => {
+                                        ListSection::Lessons => {
                                             if idx > 0 {
                                                 app.selected_list_item = Some((section, idx - 1));
                                             } else {
-                                                app.selected_list_item = Some((3, 0));
+                                                app.selected_list_item = Some((section.prev(), 0));
                                             }
                                         }
-                                        _ => {}
                                     }
                                 }
                             }
@@ -392,9 +391,12 @@ fn run_app<B: ratatui::backend::Backend>(
                                 TabType::AdditionalInfoTab => {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            0 => app.selected_list_item = Some((section + 1, idx)),
-                                            1 => app.selected_list_item = Some((section - 1, idx)),
-                                            2 | 3 => {
+                                            ListSection::Misfortunes
+                                            | ListSection::MisfortunesDifficult => {
+                                                app.selected_list_item =
+                                                    Some((section.vertical(), idx))
+                                            }
+                                            ListSection::LxResources | ListSection::RxResources => {
                                                 if idx > 0 {
                                                     app.selected_list_item =
                                                         Some((section, idx - 1));
@@ -494,9 +496,12 @@ fn run_app<B: ratatui::backend::Backend>(
                                 TabType::AdditionalInfoTab => {
                                     if let Some((section, idx)) = app.selected_list_item {
                                         match section {
-                                            0 => app.selected_list_item = Some((section + 1, idx)),
-                                            1 => app.selected_list_item = Some((section - 1, idx)),
-                                            2 | 3 => {
+                                            ListSection::Misfortunes
+                                            | ListSection::MisfortunesDifficult => {
+                                                app.selected_list_item =
+                                                    Some((section.vertical(), idx))
+                                            }
+                                            ListSection::LxResources | ListSection::RxResources => {
                                                 app.selected_list_item =
                                                     Some((section, (idx + 1) % 5));
                                             }

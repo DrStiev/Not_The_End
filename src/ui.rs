@@ -8,7 +8,11 @@ use ratatui::{
     },
 };
 
-use super::app::{App, BallType, FocusedSection, PopupType, TabType, get_idx_from_tab};
+use crate::app::{get_idx_from_section, get_section_type};
+
+use super::app::{
+    App, BallType, FocusedSection, ListSection, PopupType, TabType, get_idx_from_tab,
+};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -584,9 +588,9 @@ fn render_list_items<'a>(
     list_idx: usize,
     item_idx: usize,
     text: &'a String,
-    selected_list_item: Option<(usize, usize)>,
+    selected_list_item: Option<(ListSection, usize)>,
 ) -> Line<'a> {
-    let is_selected = selected_list_item == Some((list_idx, item_idx));
+    let is_selected = selected_list_item == Some((get_section_type(list_idx), item_idx));
     let style = if is_selected {
         Style::default()
             .fg(Color::Yellow)
@@ -596,6 +600,25 @@ fn render_list_items<'a>(
     };
     let content = if text.is_empty() { "[Vuoto]" } else { text };
     Line::from(Span::styled(content, style))
+}
+
+fn style(
+    section: ListSection,
+    idx: usize,
+    selected_list_item: Option<(ListSection, usize)>,
+    additional: Option<bool>,
+) -> Style {
+    let is_selected = selected_list_item == Some((section, idx));
+
+    if is_selected {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else if additional.is_some() && additional.unwrap() {
+        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    }
 }
 
 fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
@@ -621,18 +644,12 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .split(main_layout[0]);
 
     for i in 0..4 {
-        let is_selected = app.selected_list_item == Some((0, i));
-        let is_misfortune_used = app.additional_red_balls[i] != 0;
-
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else if is_misfortune_used {
-            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
+        let style = style(
+            ListSection::Misfortunes,
+            i,
+            app.selected_list_item,
+            Some(app.additional_red_balls[i] != 0),
+        );
 
         let block = Block::default()
             .title(" SVENTURA ")
@@ -667,18 +684,12 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .split(main_layout[1]);
 
     for i in 0..4 {
-        let is_selected = app.selected_list_item == Some((1, i));
-        let is_misfortune_used = app.additional_red_balls[i] != 0;
-
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else if is_misfortune_used {
-            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
+        let style = style(
+            ListSection::MisfortunesDifficult,
+            i,
+            app.selected_list_item,
+            Some(app.additional_red_balls[i] != 0),
+        );
 
         let block = Block::default()
             .title(" DIFFICOLTÀ ")
@@ -714,7 +725,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Line::from(Span::styled("[Vuoto]", Style::default())),
         Line::from(Span::styled("[Vuoto]", Style::default())),
     ];
-    let mut style: [Style; 2] = [Style::default(), Style::default()];
+    let mut style_arr: [Style; 2] = [Style::default(), Style::default()];
     let resources_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -722,8 +733,8 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     if let Some((section, _)) = app.selected_list_item {
         match section {
-            2 | 3 => {
-                style[section - 2] = Style::default()
+            ListSection::LxResources | ListSection::RxResources => {
+                style_arr[get_idx_from_section(section) - 2] = Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD);
             }
@@ -736,7 +747,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             .title(" Di quali RISORSE dispongo? ")
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(style[j - 2]);
+            .border_style(style_arr[j - 2]);
 
         if j == 2 {
             // modify left list
@@ -774,14 +785,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .split(main_layout[3]);
 
     for i in 0..3 {
-        let is_selected = app.selected_list_item == Some((4, i));
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
+        let style = style(ListSection::Lessons, i, app.selected_list_item, None);
 
         let block = Block::default()
             .title(" LEZIONE ")

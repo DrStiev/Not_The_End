@@ -162,6 +162,46 @@ impl Default for ListData {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ListSection {
+    Misfortunes,
+    MisfortunesDifficult,
+    LxResources,
+    RxResources,
+    Lessons,
+}
+
+impl ListSection {
+    pub fn next(&self) -> Self {
+        use ListSection::*;
+        match *self {
+            Misfortunes => MisfortunesDifficult,
+            MisfortunesDifficult => LxResources,
+            LxResources => RxResources,
+            RxResources => Lessons,
+            Lessons => Misfortunes,
+        }
+    }
+    pub fn prev(&self) -> Self {
+        use ListSection::*;
+        match *self {
+            Misfortunes => Lessons,
+            MisfortunesDifficult => Misfortunes,
+            LxResources => MisfortunesDifficult,
+            RxResources => LxResources,
+            Lessons => RxResources,
+        }
+    }
+    pub fn vertical(&self) -> Self {
+        use ListSection::*;
+        match *self {
+            Misfortunes => MisfortunesDifficult,
+            MisfortunesDifficult => Misfortunes,
+            _ => *self,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct App {
     pub white_balls: usize,
@@ -201,7 +241,7 @@ pub struct App {
     pub forced_four_mode: bool,
     // List tab data
     pub list_data: ListData,
-    pub selected_list_item: Option<(usize, usize)>, // (section idx, item idx)
+    pub selected_list_item: Option<(ListSection, usize)>, // (section Enum, item idx)
     pub editing_list_item: bool,
     pub list_edit_buffer: String,
     pub additional_red_balls: [usize; 4], // vector to store additional difficulties associated to active misfortune
@@ -260,7 +300,7 @@ impl App {
             forced_four_mode: false,
             // List tab data
             list_data,
-            selected_list_item: Some((0, 0)),
+            selected_list_item: Some((ListSection::Misfortunes, 0)),
             editing_list_item: false,
             list_edit_buffer: String::new(),
             additional_red_balls: [0, 0, 0, 0], // vector to store additional difficulties associated to active misfortune
@@ -436,40 +476,42 @@ impl App {
     }
 
     pub fn start_list_editing(&mut self) {
+        use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
             self.editing_list_item = true;
             self.list_edit_buffer = match section {
-                0 => self.list_data.misfortunes[idx].clone(),
-                1 => self.list_data.misfortunes_red_balls[idx].clone(),
-                2 => self.list_data.left_resources[idx].clone(),
-                3 => self.list_data.right_resources[idx].clone(),
-                4 => self.list_data.lessons[idx].clone(),
-                _ => String::new(),
+                Misfortunes => self.list_data.misfortunes[idx].clone(),
+                MisfortunesDifficult => self.list_data.misfortunes_red_balls[idx].clone(),
+                LxResources => self.list_data.left_resources[idx].clone(),
+                RxResources => self.list_data.right_resources[idx].clone(),
+                Lessons => self.list_data.lessons[idx].clone(),
             };
         }
     }
 
     pub fn finish_list_editing(&mut self) {
+        use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
             match section {
-                0 => {
+                Misfortunes => {
                     self.list_data.misfortunes[idx] =
                         self.list_edit_buffer.clone().trim().to_string()
                 }
-                1 => {
+                MisfortunesDifficult => {
                     self.list_data.misfortunes_red_balls[idx] =
                         self.list_edit_buffer.clone().trim().to_string()
                 }
-                2 => {
+                LxResources => {
                     self.list_data.left_resources[idx] =
                         self.list_edit_buffer.clone().trim().to_string()
                 }
-                3 => {
+                RxResources => {
                     self.list_data.right_resources[idx] =
                         self.list_edit_buffer.clone().trim().to_string()
                 }
-                4 => self.list_data.lessons[idx] = self.list_edit_buffer.clone().trim().to_string(),
-                _ => {}
+                Lessons => {
+                    self.list_data.lessons[idx] = self.list_edit_buffer.clone().trim().to_string()
+                }
             }
             self.save_data();
         }
@@ -492,27 +534,25 @@ impl App {
     }
 
     pub fn create_pool(&mut self) {
+        use BallType::*;
         self.pool.clear();
         if self.random_mode {
             // Random mode: replace white balls with random mix of red and white
             for _ in 0..self.white_balls {
                 if rand::random() {
-                    self.pool.push(BallType::White);
+                    self.pool.push(White);
                 } else {
-                    self.pool.push(BallType::Red);
+                    self.pool.push(Red);
                 }
-            }
-            for _ in 0..self.red_balls {
-                self.pool.push(BallType::Red);
             }
         } else {
             // Normal mode
             for _ in 0..self.white_balls {
-                self.pool.push(BallType::White);
+                self.pool.push(White);
             }
-            for _ in 0..self.red_balls {
-                self.pool.push(BallType::Red);
-            }
+        }
+        for _ in 0..self.red_balls {
+            self.pool.push(Red);
         }
     }
 
@@ -557,6 +597,7 @@ impl App {
     }
 
     pub fn perform_first_draw(&mut self) {
+        use PopupType::*;
         self.create_pool();
         let drawn = self.draw_from_pool(self.draw_count);
         self.drawn_balls = drawn.clone();
@@ -564,15 +605,16 @@ impl App {
         // self.first_draw_complete = true;
 
         if self.drawn_balls.len() < 5 {
-            self.popup = PopupType::ConfirmRisk;
+            self.popup = ConfirmRisk;
         } else {
             self.add_to_log(false, Vec::new());
             self.update_vertical_scroll_state();
-            self.popup = PopupType::None;
+            self.popup = None;
         }
     }
 
     pub fn perform_risk_draw(&mut self) {
+        use PopupType::*;
         let remaining = 5 - self.drawn_balls.len();
         let mut risk_balls = Vec::new();
         if remaining > 0 {
@@ -582,7 +624,7 @@ impl App {
         }
         self.add_to_log(true, risk_balls);
         self.update_vertical_scroll_state();
-        self.popup = PopupType::None;
+        self.popup = None;
     }
 
     pub fn cancel_draw(&mut self) {
@@ -607,12 +649,13 @@ impl App {
 
         match self.current_tab {
             TabType::DrawTab => {
+                use FocusedSection::*;
                 if is_inside(x, y, &self.white_balls_area) {
-                    self.focused_section = FocusedSection::WhiteBalls;
+                    self.focused_section = WhiteBalls;
                 } else if is_inside(x, y, &self.red_balls_area) {
-                    self.focused_section = FocusedSection::RedBalls;
+                    self.focused_section = RedBalls;
                 } else if is_inside(x, y, &self.draw_input_area) {
-                    self.focused_section = FocusedSection::DrawInput;
+                    self.focused_section = DrawInput;
                 } else if is_inside(x, y, &self.random_mode_area) {
                     self.random_mode = !self.random_mode;
                 } else if is_inside(x, y, &self.forced_four_area) {
@@ -625,18 +668,19 @@ impl App {
                 }
             }
             TabType::AdditionalInfoTab => {
+                use ListSection::*;
                 // Tab 2 specific areas
                 for idx in 0..4 {
                     // ignore mouse click if I'm in editing mode
                     if !self.editing_list_item {
                         if idx < 2 && is_inside(x, y, &self.resources_area[idx]) {
-                            self.selected_list_item = Some((idx + 2, 0));
+                            self.selected_list_item = Some((get_section_type(idx + 2), 0));
                         } else if idx < 3 && is_inside(x, y, &self.lections_area[idx]) {
-                            self.selected_list_item = Some((4, idx));
+                            self.selected_list_item = Some((Lessons, idx));
                         } else if is_inside(x, y, &self.misfortunes_area[idx]) {
-                            self.selected_list_item = Some((0, idx));
+                            self.selected_list_item = Some((Misfortunes, idx));
                         } else if is_inside(x, y, &self.misfortunes_red_balls_area[idx]) {
-                            self.selected_list_item = Some((1, idx));
+                            self.selected_list_item = Some((MisfortunesDifficult, idx));
                         }
                     }
                 }
@@ -646,33 +690,59 @@ impl App {
     }
 }
 
-pub fn get_tab_type(idx: usize) -> TabType {
+pub fn get_section_type(idx: usize) -> ListSection {
+    use ListSection::*;
     match idx {
-        0 => TabType::DrawTab,
-        1 => TabType::CharacterSheetTab,
-        2 => TabType::AdditionalInfoTab,
-        3 => TabType::LogTab,
-        _ => TabType::None,
+        0 => Misfortunes,
+        1 => MisfortunesDifficult,
+        2 => LxResources,
+        3 => RxResources,
+        4 => Lessons,
+        _ => Misfortunes,
+    }
+}
+
+pub fn get_idx_from_section(section: ListSection) -> usize {
+    use ListSection::*;
+    match section {
+        Misfortunes => 0,
+        MisfortunesDifficult => 1,
+        LxResources => 2,
+        RxResources => 3,
+        Lessons => 4,
+    }
+}
+
+pub fn get_tab_type(idx: usize) -> TabType {
+    use TabType::*;
+    match idx {
+        0 => DrawTab,
+        1 => CharacterSheetTab,
+        2 => AdditionalInfoTab,
+        3 => LogTab,
+        _ => None,
     }
 }
 
 pub fn get_idx_from_tab(tab: TabType) -> usize {
+    use TabType::*;
     match tab {
-        TabType::DrawTab => 0,
-        TabType::CharacterSheetTab => 1,
-        TabType::AdditionalInfoTab => 2,
-        TabType::LogTab => 3,
-        TabType::None => 0, // if not valid return 0 as default
+        DrawTab => 0,
+        CharacterSheetTab => 1,
+        AdditionalInfoTab => 2,
+        LogTab => 3,
+        None => 0, // if not valid return 0 as default
     }
 }
 
-pub fn get_list_item_length(item: Option<(usize, usize)>) -> usize {
+pub fn get_list_item_length(item: Option<(ListSection, usize)>) -> usize {
+    use ListSection::*;
     match item {
-        Some((0, _)) => 50,                // Misfortunes
-        Some((1, _)) => 2,                 // Misfortunes Difficulties
-        Some((2, _)) | Some((3, _)) => 75, // Resources
-        Some((4, _)) => 500,               // Lessons
-        _ => 0,                            // others
+        Some((Misfortunes, _)) => 50,
+        Some((MisfortunesDifficult, _)) => 2,
+        Some((LxResources, _)) | Some((RxResources, _)) => 75,
+        Some((Lessons, _)) => 500,
+        _ => 0,
     }
 }
 
