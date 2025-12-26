@@ -229,23 +229,17 @@ fn run_app<B: ratatui::backend::Backend>(
                                 } else if app.current_tab == 1 {
                                     if let Some(idx) = app.selected_node {
                                         match idx {
-                                            0 | 1 | 2 | 4 | 5 | 6 | 11 | 12 | 3 => {
+                                            0..7 | 11..13 => {
                                                 app.selected_node = Some(idx + 4);
                                             }
-                                            8 | 9 | 10 | 7 => {
+                                            7..11 => {
                                                 app.selected_node = Some(idx + 5);
                                             }
-                                            13 | 14 | 15 => {
+                                            13..16 => {
                                                 app.selected_node = Some(idx + 3);
                                             }
-                                            16 => {
-                                                app.selected_node = Some(0);
-                                            }
-                                            17 => {
-                                                app.selected_node = Some(1);
-                                            }
-                                            18 => {
-                                                app.selected_node = Some(2);
+                                            16..19 => {
+                                                app.selected_node = Some(idx - 16);
                                             }
                                             _ => {}
                                         }
@@ -301,23 +295,17 @@ fn run_app<B: ratatui::backend::Backend>(
                                 } else if app.current_tab == 1 {
                                     if let Some(idx) = app.selected_node {
                                         match idx {
-                                            16 | 17 | 18 | 12 | 13 | 14 | 7 | 6 | 15 => {
+                                            6..8 | 12..19 => {
                                                 app.selected_node = Some(idx - 4);
                                             }
-                                            8 | 9 | 10 | 11 => {
+                                            8..12 => {
                                                 app.selected_node = Some(idx - 5);
                                             }
-                                            3 | 4 | 5 => {
+                                            3..6 => {
                                                 app.selected_node = Some(idx - 3);
                                             }
-                                            0 => {
-                                                app.selected_node = Some(16);
-                                            }
-                                            1 => {
-                                                app.selected_node = Some(17);
-                                            }
-                                            2 => {
-                                                app.selected_node = Some(18);
+                                            0..3 => {
+                                                app.selected_node = Some(idx + 16);
                                             }
                                             _ => {}
                                         }

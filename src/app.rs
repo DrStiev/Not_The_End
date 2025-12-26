@@ -581,20 +581,17 @@ impl App {
         } else if self.current_tab == 2 {
             // Tab 2 specific areas
             for idx in 0..4 {
-                if idx < 2 && is_inside(x, y, &self.resources_area[idx]) && !self.editing_list_item
-                {
-                    self.selected_list_item = Some((idx + 2, 0));
-                } else if idx < 3
-                    && is_inside(x, y, &self.lections_area[idx])
-                    && !self.editing_list_item
-                {
-                    self.selected_list_item = Some((4, idx));
-                } else if is_inside(x, y, &self.misfortunes_area[idx]) && !self.editing_list_item {
-                    self.selected_list_item = Some((0, idx));
-                } else if is_inside(x, y, &self.misfortunes_red_balls_area[idx])
-                    && !self.editing_list_item
-                {
-                    self.selected_list_item = Some((1, idx));
+                // ignore mouse click if I'm in editing mode
+                if !self.editing_list_item {
+                    if idx < 2 && is_inside(x, y, &self.resources_area[idx]) {
+                        self.selected_list_item = Some((idx + 2, 0));
+                    } else if idx < 3 && is_inside(x, y, &self.lections_area[idx]) {
+                        self.selected_list_item = Some((4, idx));
+                    } else if is_inside(x, y, &self.misfortunes_area[idx]) {
+                        self.selected_list_item = Some((0, idx));
+                    } else if is_inside(x, y, &self.misfortunes_red_balls_area[idx]) {
+                        self.selected_list_item = Some((1, idx));
+                    }
                 }
             }
         }

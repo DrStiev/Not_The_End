@@ -72,7 +72,7 @@ L’interfaccia è suddivisa in quattro schede:
 | Frecce         | Navigazione tra gli elementi          |
 | Mouse Sinistro | Selezione elementi UI                 |
 | Enter          | Conferma / Modifica campo selezionato |
-| Esc            | Annulla selezione / Conferma modifica |
+| Esc            | Annulla / Conferma modifica           |
 | E              | Abilita campo selezionato             |
 | R              | Reset della sfida corrente            |
 | Q              | Uscita dall'applicazione              |
