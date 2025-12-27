@@ -231,24 +231,15 @@ fn run_app<B: ratatui::backend::Backend>(
                             TabType::AdditionalInfoTab => {
                                 if let Some((section, idx)) = app.selected_list_item {
                                     match section {
-                                        ListSection::Misfortunes => {
+                                        ListSection::Misfortunes
+                                        | ListSection::MisfortunesDifficult => {
                                             if idx < 3 {
                                                 app.selected_list_item = Some((section, idx + 1));
                                             } else {
                                                 app.selected_list_item = Some((section.next(), 0));
                                             }
                                         }
-                                        ListSection::MisfortunesDifficult => {
-                                            if idx < 3 {
-                                                app.selected_list_item = Some((section, idx + 1));
-                                            } else {
-                                                app.selected_list_item = Some((section.next(), 0));
-                                            }
-                                        }
-                                        ListSection::LxResources => {
-                                            app.selected_list_item = Some((section.next(), 0));
-                                        }
-                                        ListSection::RxResources => {
+                                        ListSection::LxResources | ListSection::RxResources => {
                                             app.selected_list_item = Some((section.next(), 0));
                                         }
                                         ListSection::Lessons => {
@@ -301,7 +292,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                             if idx > 0 {
                                                 app.selected_list_item = Some((section, idx - 1));
                                             } else {
-                                                app.selected_list_item = Some((section.prev(), 2));
+                                                app.selected_list_item = Some((section.prev(), 3));
                                             }
                                         }
                                         ListSection::LxResources => {
