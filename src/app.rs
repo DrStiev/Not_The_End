@@ -285,7 +285,7 @@ impl App {
     pub fn new() -> App {
         let honeycomb_nodes = Self::load_honeycomb_data();
         let list_data = Self::load_list_data();
-        
+
         App {
             white_balls: 0,
             red_balls: 0,
@@ -572,6 +572,11 @@ impl App {
         self.forced_four_mode = false;
         self.random_mode = false;
         self.focused_section = FocusedSection::WhiteBalls;
+        // clear array of used traits
+        self.used_traits.clear();
+        self.selected_node = Some(9); // set selection over archetype
+        self.additional_red_balls = [0, 0, 0, 0];
+        self.selected_list_item = Some((ListSection::Misfortunes, 0)); // set selection over element [0,0]
     }
 
     pub fn create_pool(&mut self) {
@@ -681,7 +686,8 @@ impl App {
 
     fn update_list_vertical_scroll_state(&mut self, idx: usize) {
         // use mod (%) operator to ensure that idx stay between 0..2
-        let content_height = self.list_data.lessons[idx % 3].len() / 50; // 50 is approximately the number of character on each line
+        let width = self.lections_area[idx % 3].width; // get length of displayed area
+        let content_height = self.list_data.lessons[idx % 3].len() / width as usize; // calculate amount of scroll available
         self.list_vertical_scroll_state[idx % 3] =
             self.list_vertical_scroll_state[idx % 3].content_length(content_height);
     }

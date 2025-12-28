@@ -50,7 +50,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
-) -> io::Result<()> where std::io::Error: From<<B as Backend>::Error> {
+) -> io::Result<()>
+where
+    std::io::Error: From<<B as Backend>::Error>,
+{
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -512,8 +515,8 @@ fn run_app<B: ratatui::backend::Backend>(
                                             }
                                             ListSection::Lessons => {
                                                 if app.list_vertical_scroll[idx]
-                                                    < app.list_data.lessons[idx].len() / 50
-                                                // 50 is approximately the number of character on each line
+                                                    < app.list_data.lessons[idx].len()
+                                                        / app.lections_area[idx].width as usize
                                                 {
                                                     app.list_vertical_scroll[idx] = app
                                                         .list_vertical_scroll[idx]

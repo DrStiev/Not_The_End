@@ -9,7 +9,7 @@
              "name": "(Windows) Launch",
              "type": "cppvsdbg",
              "request": "launch",
-             "program": "${workspaceRoot}/target/debug/Not_the_End.exe",
+             "program": "${workspaceRoot}/target/debug/Not_The_End.exe",
              "args": [],
              "stopAtEntry": false,
              "cwd": "${workspaceRoot}",
@@ -17,10 +17,10 @@
              "externalConsole": true
          },
          {
-             "name": "(OSX) Launch",
+             "name": "(Ubuntu) Launch",
              "type": "lldb",
              "request": "launch",
-             "program": "${workspaceRoot}/target/debug/Not_the_End",
+             "program": "${workspaceRoot}/target/debug/Not_The_End",
              "args": [],
              "cwd": "${workspaceRoot}",
          }
