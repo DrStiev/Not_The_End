@@ -8,11 +8,9 @@ use ratatui::{
     },
 };
 
-use crate::app::{get_idx_from_section, get_section_type};
+use crate::app::get_section_type;
 
-use super::app::{
-    App, BallType, FocusedSection, ListSection, PopupType, TabType, get_idx_from_tab,
-};
+use super::app::{App, BallType, FocusedSection, ListSection, PopupType, TabType};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -29,7 +27,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 .border_type(BorderType::Rounded)
                 .title(" Menù (Tab) "),
         )
-        .select(get_idx_from_tab(app.current_tab))
+        .select(app.current_tab.idx())
         .style(Style::default().fg(Color::White))
         .highlight_style(
             Style::default()
@@ -734,7 +732,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     if let Some((section, _)) = app.selected_list_item {
         match section {
             ListSection::LxResources | ListSection::RxResources => {
-                style_arr[get_idx_from_section(section) - 2] = Style::default()
+                style_arr[section.idx() - 2] = Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD);
             }
@@ -769,7 +767,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
                 .collect();
         }
 
-        let paragraph = Paragraph::new(items).block(block);
+        let paragraph = Paragraph::new(items).block(block).wrap(Wrap { trim: true });
         app.resources_area[j - 2] = resources_layout[j - 2];
         f.render_widget(paragraph, resources_layout[j - 2]);
     }
@@ -799,10 +797,24 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             &app.list_data.lessons[i]
         };
 
-        let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
+        let paragraph = Paragraph::new(text)
+            .block(block)
+            .scroll((app.list_vertical_scroll[i] as u16, 0))
+            .wrap(Wrap { trim: true });
 
         app.lections_area[i] = lessons_layout[i];
         f.render_widget(paragraph, lessons_layout[i]);
+
+        // Render scrollbar
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("↑"))
+            .end_symbol(Some("↓"));
+
+        f.render_stateful_widget(
+            scrollbar,
+            lessons_layout[i],
+            &mut app.list_vertical_scroll_state[i],
+        );
     }
 }
 

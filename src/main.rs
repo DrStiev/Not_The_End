@@ -6,17 +6,17 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::{Terminal, backend::CrosstermBackend, prelude::Backend};
 use std::io;
 
 // include module ui.rs
 mod app;
-use crate::app::{App, FocusedSection, ListSection, PopupType, TabType, get_list_item_length};
+use crate::app::{App, FocusedSection, ListSection, PopupType, TabType};
 
 mod ui;
 use crate::ui::ui;
 
-fn main() -> Result<(), io::Error> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // when enablebled raw mode:
     // Input will not be forwarded to screen
     // Input will not be processed on enter press
@@ -50,7 +50,7 @@ fn main() -> Result<(), io::Error> {
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
-) -> io::Result<()> {
+) -> io::Result<()> where std::io::Error: From<<B as Backend>::Error> {
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -133,7 +133,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                 app.node_edit_buffer.push(c);
                             } else if app.editing_list_item
                                 && app.list_edit_buffer.len()
-                                    < get_list_item_length(app.selected_list_item)
+                                    < app.selected_list_item.unwrap().0.item_length()
                             {
                                 app.list_edit_buffer.push(c);
                             }
@@ -186,7 +186,11 @@ fn run_app<B: ratatui::backend::Backend>(
                                         TabType::AdditionalInfoTab => {
                                             if app.editing_list_item {
                                                 if app.list_edit_buffer.len()
-                                                    < get_list_item_length(app.selected_list_item)
+                                                    < app
+                                                        .selected_list_item
+                                                        .unwrap()
+                                                        .0
+                                                        .item_length()
                                                 {
                                                     app.list_edit_buffer.push('\n');
                                                 }
@@ -402,16 +406,20 @@ fn run_app<B: ratatui::backend::Backend>(
                                                         Some((section, 4 - idx));
                                                 }
                                             }
-                                            _ => {}
+                                            ListSection::Lessons => {
+                                                app.list_vertical_scroll[idx] =
+                                                    app.list_vertical_scroll[idx].saturating_sub(1);
+                                                app.list_vertical_scroll_state[idx] = app
+                                                    .list_vertical_scroll_state[idx]
+                                                    .position(app.list_vertical_scroll[idx]);
+                                            }
                                         }
                                     }
                                 }
                                 TabType::LogTab => {
-                                    if app.vertical_scroll > 0 {
-                                        app.vertical_scroll -= 1;
-                                        app.vertical_scroll_state =
-                                            app.vertical_scroll_state.position(app.vertical_scroll);
-                                    }
+                                    app.vertical_scroll = app.vertical_scroll.saturating_sub(1);
+                                    app.vertical_scroll_state =
+                                        app.vertical_scroll_state.position(app.vertical_scroll);
                                 }
                                 _ => {}
                             }
@@ -502,14 +510,25 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 app.selected_list_item =
                                                     Some((section, (idx + 1) % 5));
                                             }
-                                            _ => {}
+                                            ListSection::Lessons => {
+                                                if app.list_vertical_scroll[idx]
+                                                    < app.list_data.lessons[idx].len() / 50
+                                                // 50 is approximately the number of character on each line
+                                                {
+                                                    app.list_vertical_scroll[idx] = app
+                                                        .list_vertical_scroll[idx]
+                                                        .saturating_add(1);
+                                                    app.list_vertical_scroll_state[idx] = app
+                                                        .list_vertical_scroll_state[idx]
+                                                        .position(app.list_vertical_scroll[idx]);
+                                                }
+                                            }
                                         }
                                     }
                                 }
                                 TabType::LogTab => {
-                                    let max_scroll = (app.history.len() * 13).saturating_sub(10);
-                                    if app.vertical_scroll < max_scroll {
-                                        app.vertical_scroll += 1;
+                                    if app.vertical_scroll < app.history.len() * 13 {
+                                        app.vertical_scroll = app.vertical_scroll.saturating_add(1);
                                         app.vertical_scroll_state =
                                             app.vertical_scroll_state.position(app.vertical_scroll);
                                     }

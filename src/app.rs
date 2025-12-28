@@ -49,6 +49,17 @@ impl TabType {
             _ => DrawTab,
         }
     }
+
+    pub fn idx(&self) -> usize {
+        use TabType::*;
+        match *self {
+            DrawTab => 0,
+            CharacterSheetTab => 1,
+            AdditionalInfoTab => 2,
+            LogTab => 3,
+            None => 0, // if not valid return 0 as default
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -200,6 +211,27 @@ impl ListSection {
             _ => *self,
         }
     }
+
+    pub fn idx(&self) -> usize {
+        use ListSection::*;
+        match *self {
+            Misfortunes => 0,
+            MisfortunesDifficult => 1,
+            LxResources => 2,
+            RxResources => 3,
+            Lessons => 4,
+        }
+    }
+
+    pub fn item_length(&self) -> usize {
+        use ListSection::*;
+        match *self {
+            Misfortunes => 50,
+            MisfortunesDifficult => 2,
+            LxResources | RxResources => 75,
+            Lessons => 500,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -241,6 +273,8 @@ pub struct App {
     pub forced_four_mode: bool,
     // List tab data
     pub list_data: ListData,
+    pub list_vertical_scroll: [usize; 3], // each lesson have teir own scrollbar
+    pub list_vertical_scroll_state: [ScrollbarState; 3],
     pub selected_list_item: Option<(ListSection, usize)>, // (section Enum, item idx)
     pub editing_list_item: bool,
     pub list_edit_buffer: String,
@@ -251,7 +285,7 @@ impl App {
     pub fn new() -> App {
         let honeycomb_nodes = Self::load_honeycomb_data();
         let list_data = Self::load_list_data();
-
+        
         App {
             white_balls: 0,
             red_balls: 0,
@@ -300,6 +334,12 @@ impl App {
             forced_four_mode: false,
             // List tab data
             list_data,
+            list_vertical_scroll: [0, 0, 0], // each lesson have teir own scrollbar
+            list_vertical_scroll_state: [
+                ScrollbarState::default(),
+                ScrollbarState::default(),
+                ScrollbarState::default(),
+            ],
             selected_list_item: Some((ListSection::Misfortunes, 0)),
             editing_list_item: false,
             list_edit_buffer: String::new(),
@@ -510,7 +550,8 @@ impl App {
                         self.list_edit_buffer.clone().trim().to_string()
                 }
                 Lessons => {
-                    self.list_data.lessons[idx] = self.list_edit_buffer.clone().trim().to_string()
+                    self.list_data.lessons[idx] = self.list_edit_buffer.clone().trim().to_string();
+                    self.update_list_vertical_scroll_state(idx)
                 }
             }
             self.save_data();
@@ -638,6 +679,13 @@ impl App {
         self.vertical_scroll_state = self.vertical_scroll_state.content_length(content_height);
     }
 
+    fn update_list_vertical_scroll_state(&mut self, idx: usize) {
+        // use mod (%) operator to ensure that idx stay between 0..2
+        let content_height = self.list_data.lessons[idx % 3].len() / 50; // 50 is approximately the number of character on each line
+        self.list_vertical_scroll_state[idx % 3] =
+            self.list_vertical_scroll_state[idx % 3].content_length(content_height);
+    }
+
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) {
         // Check tab clicks
         for (i, area) in self.tab_areas.iter().enumerate() {
@@ -677,6 +725,7 @@ impl App {
                             self.selected_list_item = Some((get_section_type(idx + 2), 0));
                         } else if idx < 3 && is_inside(x, y, &self.lections_area[idx]) {
                             self.selected_list_item = Some((Lessons, idx));
+                            self.update_list_vertical_scroll_state(idx);
                         } else if is_inside(x, y, &self.misfortunes_area[idx]) {
                             self.selected_list_item = Some((Misfortunes, idx));
                         } else if is_inside(x, y, &self.misfortunes_red_balls_area[idx]) {
@@ -702,17 +751,6 @@ pub fn get_section_type(idx: usize) -> ListSection {
     }
 }
 
-pub fn get_idx_from_section(section: ListSection) -> usize {
-    use ListSection::*;
-    match section {
-        Misfortunes => 0,
-        MisfortunesDifficult => 1,
-        LxResources => 2,
-        RxResources => 3,
-        Lessons => 4,
-    }
-}
-
 pub fn get_tab_type(idx: usize) -> TabType {
     use TabType::*;
     match idx {
@@ -721,28 +759,6 @@ pub fn get_tab_type(idx: usize) -> TabType {
         2 => AdditionalInfoTab,
         3 => LogTab,
         _ => None,
-    }
-}
-
-pub fn get_idx_from_tab(tab: TabType) -> usize {
-    use TabType::*;
-    match tab {
-        DrawTab => 0,
-        CharacterSheetTab => 1,
-        AdditionalInfoTab => 2,
-        LogTab => 3,
-        None => 0, // if not valid return 0 as default
-    }
-}
-
-pub fn get_list_item_length(item: Option<(ListSection, usize)>) -> usize {
-    use ListSection::*;
-    match item {
-        Some((Misfortunes, _)) => 50,
-        Some((MisfortunesDifficult, _)) => 2,
-        Some((LxResources, _)) | Some((RxResources, _)) => 75,
-        Some((Lessons, _)) => 500,
-        _ => 0,
     }
 }
 
