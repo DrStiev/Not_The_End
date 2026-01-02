@@ -505,7 +505,7 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_widget(block, area);
 
     // Store area for click detection
-    app.graph_area = area;
+    app.graph_area = inner_area;
 
     // Check if area is too small
     if inner_area.width < 30 || inner_area.height < 15 {

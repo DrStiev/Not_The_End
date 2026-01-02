@@ -743,6 +743,254 @@ impl App {
             _ => {}
         }
     }
+
+    pub fn increment_balls(&mut self) {
+        match self.focused_section {
+            FocusedSection::WhiteBalls => {
+                // 20 token as hard cap
+                if self.white_balls < 20 {
+                    self.white_balls += 1;
+                }
+            }
+            FocusedSection::RedBalls => {
+                // 20 token as hard cap
+                if self.red_balls < 20 {
+                    self.red_balls += 1;
+                }
+            }
+            FocusedSection::DrawInput => {
+                if self.draw_count < 4 && !self.forced_four_mode {
+                    self.draw_count += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn decrement_balls(&mut self) {
+        match self.focused_section {
+            FocusedSection::WhiteBalls => {
+                if self.white_balls > 0 {
+                    self.white_balls -= 1;
+                    // pop first trait if present. do't care which one
+                    if !self.used_traits.is_empty() {
+                        let _ = self.used_traits.pop();
+                    }
+                }
+            }
+            FocusedSection::RedBalls => {
+                if self.red_balls > 0 {
+                    if self.red_balls > self.additional_red_balls.iter().sum() {
+                        self.red_balls -= 1;
+                    }
+                }
+            }
+            FocusedSection::DrawInput => {
+                if self.draw_count > 1 && !self.forced_four_mode {
+                    self.draw_count -= 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn next_section(&mut self) {
+        use ListSection::*;
+        if let Some((section, idx)) = self.selected_list_item {
+            match section {
+                Misfortunes | MisfortunesDifficult => {
+                    if idx < 3 {
+                        self.selected_list_item = Some((section, idx + 1));
+                    } else {
+                        self.selected_list_item = Some((section.next(), 0));
+                    }
+                }
+                LxResources | RxResources => {
+                    self.selected_list_item = Some((section.next(), 0));
+                }
+                Lessons => {
+                    if idx < 2 {
+                        self.selected_list_item = Some((section, idx + 1));
+                    } else {
+                        self.selected_list_item = Some((section.next(), 0));
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn prev_section(&mut self) {
+        use ListSection::*;
+        if let Some((section, idx)) = self.selected_list_item {
+            match section {
+                Misfortunes => {
+                    if idx > 0 {
+                        self.selected_list_item = Some((section, idx - 1));
+                    } else {
+                        self.selected_list_item = Some((section.prev(), 2));
+                    }
+                }
+                MisfortunesDifficult => {
+                    if idx > 0 {
+                        self.selected_list_item = Some((section, idx - 1));
+                    } else {
+                        self.selected_list_item = Some((section.prev(), 3));
+                    }
+                }
+                LxResources => {
+                    self.selected_list_item = Some((section.prev(), 3));
+                }
+                RxResources => {
+                    self.selected_list_item = Some((section.prev(), 0));
+                }
+                Lessons => {
+                    if idx > 0 {
+                        self.selected_list_item = Some((section, idx - 1));
+                    } else {
+                        self.selected_list_item = Some((section.prev(), 0));
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn up_section(&mut self) {
+        use ListSection::*;
+        if let Some((section, idx)) = self.selected_list_item {
+            match section {
+                Misfortunes | MisfortunesDifficult => {
+                    self.selected_list_item = Some((section.vertical(), idx));
+                }
+                LxResources | RxResources => {
+                    if idx > 0 {
+                        self.selected_list_item = Some((section, idx - 1));
+                    } else {
+                        self.selected_list_item = Some((section, 4 - idx));
+                    }
+                }
+                Lessons => {
+                    self.list_vertical_scroll[idx] =
+                        self.list_vertical_scroll[idx].saturating_sub(1);
+                    self.list_vertical_scroll_state[idx] = self.list_vertical_scroll_state[idx]
+                        .position(self.list_vertical_scroll[idx]);
+                }
+            }
+        }
+    }
+
+    pub fn down_section(&mut self) {
+        use ListSection::*;
+        if let Some((section, idx)) = self.selected_list_item {
+            match section {
+                Misfortunes | MisfortunesDifficult => {
+                    self.selected_list_item = Some((section.vertical(), idx))
+                }
+                LxResources | RxResources => {
+                    self.selected_list_item = Some((section, (idx + 1) % 5));
+                }
+                Lessons => {
+                    if self.list_vertical_scroll[idx]
+                        < self.list_data.lessons[idx].len() / self.lections_area[idx].width as usize
+                    {
+                        self.list_vertical_scroll[idx] =
+                            self.list_vertical_scroll[idx].saturating_add(1);
+                        self.list_vertical_scroll_state[idx] = self.list_vertical_scroll_state[idx]
+                            .position(self.list_vertical_scroll[idx]);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn next_hex(&mut self) {
+        if let Some(idx) = self.selected_node {
+            match idx {
+                0..7 | 11..13 => {
+                    self.selected_node = Some(idx + 4);
+                }
+                7..11 => {
+                    self.selected_node = Some(idx + 5);
+                }
+                13..16 => {
+                    self.selected_node = Some(idx + 3);
+                }
+                16..19 => {
+                    self.selected_node = Some(idx - 16);
+                }
+                _ => {} // default value
+            }
+        }
+    }
+
+    pub fn prev_hex(&mut self) {
+        if let Some(idx) = self.selected_node {
+            match idx {
+                6..8 | 12..19 => {
+                    self.selected_node = Some(idx - 4);
+                }
+                8..12 => {
+                    self.selected_node = Some(idx - 5);
+                }
+                3..6 => {
+                    self.selected_node = Some(idx - 3);
+                }
+                0..3 => {
+                    self.selected_node = Some(idx + 16);
+                }
+                _ => {} // default value
+            }
+        }
+    }
+
+    pub fn up_hex(&mut self) {
+        if let Some(idx) = self.selected_node {
+            match idx {
+                0 => {
+                    self.selected_node = Some(2);
+                }
+                3 => {
+                    self.selected_node = Some(6);
+                }
+                7 => {
+                    self.selected_node = Some(11);
+                }
+                12 => {
+                    self.selected_node = Some(15);
+                }
+                16 => {
+                    self.selected_node = Some(18);
+                }
+                _ => {
+                    self.selected_node = Some(idx - 1);
+                } 
+            }
+        }
+    }
+
+    pub fn down_hex(&mut self) {
+        if let Some(idx) = self.selected_node {
+            match idx {
+                2 => {
+                    self.selected_node = Some(0);
+                }
+                6 => {
+                    self.selected_node = Some(3);
+                }
+                11 => {
+                    self.selected_node = Some(7);
+                }
+                15 => {
+                    self.selected_node = Some(12);
+                }
+                18 => {
+                    self.selected_node = Some(16);
+                }
+                _ => {
+                    self.selected_node = Some(idx + 1);
+                } 
+            }
+        }
+    }
 }
 
 pub fn get_section_type(idx: usize) -> ListSection {

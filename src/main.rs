@@ -32,14 +32,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = terminal.draw(|frame| ui(frame, &mut app));
             // should be handled with a '?' operator
             if handle_key_press(&mut app).unwrap() {
+                disable_raw_mode()?;
                 // if return value is true then 'Q' or 'q' key has been pressed and application need to quit
-                break;
+                break Ok(());
             }
         }
-    });
+    })
 
-    disable_raw_mode()?;
-    Ok(())
+    // disable_raw_mode()?;
+    // Ok(())
 }
 
 #[cfg(test)]
