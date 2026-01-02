@@ -1,3 +1,7 @@
+[![Built With Ratatui](https://img.shields.io/badge/Built_With_Ratatui-000?logo=ratatui&logoColor=fff)](https://ratatui.rs/)
+[![Static Badge](https://img.shields.io/badge/MIT-blue?style=flat&label=license&labelColor=gray)](LICENSE)
+
+
 # Not The End – Local TUI Game Helper
 
 Un helper locale basato su terminale per giocare a **Not the End**, il TTRPG narrativo di Claudio Pustorino, quando non è possibile giocare dal vivo.
@@ -105,4 +109,4 @@ Feedback, suggerimenti e contributi sono benvenuti.
 
 ## Licenza
 
-Questo progetto è distribuito sotto licenza MIT.
+Questo progetto è distribuito sotto [licenza MIT](LICENSE).

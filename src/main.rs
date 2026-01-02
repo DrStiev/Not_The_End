@@ -41,3 +41,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     disable_raw_mode()?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    // cargo insta test --review
+    use crate::App;
+    use crate::ui::ui;
+    use insta::assert_snapshot;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    #[test]
+    fn test_render_app() {
+        let mut app = App::new();
+        let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
+        // create and run your app/widget here
+        terminal.draw(|frame| ui(frame, &mut app)).unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+}
