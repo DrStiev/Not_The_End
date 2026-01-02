@@ -1,7 +1,7 @@
 use crossterm::{
-    event::EnableMouseCapture,
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{EnterAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use std::io;
 
@@ -32,7 +32,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = terminal.draw(|frame| ui(frame, &mut app));
             // should be handled with a '?' operator
             if handle_key_press(&mut app).unwrap() {
+                // disable raw mode and make console print normally
                 disable_raw_mode()?;
+                execute!(
+                    terminal.backend_mut(),
+                    LeaveAlternateScreen,
+                    DisableMouseCapture
+                )?;
+                terminal.show_cursor()?;
                 // if return value is true then 'Q' or 'q' key has been pressed and application need to quit
                 break Ok(());
             }
