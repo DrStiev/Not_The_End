@@ -772,7 +772,7 @@ impl App {
             FocusedSection::WhiteBalls => {
                 if self.white_balls > 0 {
                     self.white_balls -= 1;
-                    // pop first trait if present. do't care which one
+                    // pop first trait if present. don't care which one
                     if !self.used_traits.is_empty() {
                         let _ = self.used_traits.pop();
                     }
@@ -780,8 +780,18 @@ impl App {
             }
             FocusedSection::RedBalls => {
                 if self.red_balls > 0 {
+                    // first remove normal difficult
                     if self.red_balls > self.additional_red_balls.iter().sum() {
                         self.red_balls -= 1;
+                    } else {
+                        // remove first (in order) additional difficult from misfortunes
+                        for (i,d) in self.additional_red_balls.clone().iter().enumerate() {
+                            if *d > 0 {
+                                self.red_balls -= *d;
+                                self.additional_red_balls[i] = 0;
+                                break;
+                            }
+                        }
                     }
                 }
             }
