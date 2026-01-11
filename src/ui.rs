@@ -508,7 +508,7 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     app.graph_area = inner_area;
 
     // Check if area is too small
-    if inner_area.width < 30 || inner_area.height < 15 {
+    if inner_area.width < 20 || inner_area.height < 10 {
         let warning =
             Paragraph::new("Finestra troppo piccola!\nIngrandire per visualizzare la scheda.")
                 .alignment(Alignment::Center)

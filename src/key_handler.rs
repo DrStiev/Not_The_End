@@ -247,7 +247,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                     app.handle_mouse_click(mouse.column, mouse.row);
                     // Also check for node clicks in graph tab
                     if app.current_tab == TabType::CharacterSheetTab {
-                        app.handle_node_click(mouse.column, mouse.row, &app.graph_area.clone());
+                        app.handle_node_click(mouse.column, mouse.row);
                     }
                 }
                 _ => {}

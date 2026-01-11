@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, fs};
 
 const DATA_FILE: &str = "character_sheet.toml";
+const MAX_TOKEN: usize = 20;
+const MAX_DRAW: usize = 4;
+const MIN_DRAW: usize = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BallType {
@@ -135,6 +138,88 @@ pub struct HoneycombNode {
     pub height: u16,
 }
 
+impl HoneycombNode {
+    fn create_honeycomb_layout_with_data(texts: Vec<String>) -> Vec<Self> {
+        let mut nodes = Vec::new();
+        let node_width = 14; // 12
+        let node_height = 6; // 6
+        let spacing_x = 0;
+        let spacing_y = 0;
+        let total_width = node_width + spacing_x;
+        let total_height = node_height + spacing_y;
+
+        //            /‾‾‾\             5 //              |‾‾‾‾|
+        //       /‾‾‾\\___//‾‾‾\        4 //        |‾‾‾‾||____||‾‾‾‾|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   3 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/   2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/   0 //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  -1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
+        //  \___//‾‾‾\\___//‾‾‾\\___/  -2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
+        //       \___//‾‾‾\\___/       -3 //        |____||‾‾‾‾||____|
+        //            \___/            -4 //              |____|
+        //   -2   -1    0    1    2      //    -2    -1     0     1     2
+        let positions = [
+            // column -2
+            (-2, -2),
+            (-2, 0),
+            (-2, 2), // 0,1,2
+            // column -1
+            (-1, -3),
+            (-1, -1),
+            (-1, 1),
+            (-1, 3), // 3,4,5,6
+            // column 0
+            (0, -4),
+            (0, -2),
+            (0, 0),
+            (0, 2),
+            (0, 4), // 7,8,9,10,11
+            // column 1
+            (1, -3),
+            (1, -1),
+            (1, 1),
+            (1, 3), // 12,13,14,15
+            // column 2
+            (2, -2),
+            (2, 0),
+            (2, 2), // 16,17,18
+        ];
+
+        for (i, &(col, row)) in positions.iter().enumerate() {
+            let text = if i < texts.len() {
+                texts[i].clone()
+            } else {
+                String::new()
+            };
+
+            nodes.push(HoneycombNode {
+                text,
+                x: col * total_width as i16,
+                y: (row * total_height as i16) / 2,
+                width: node_width,
+                height: node_height,
+            });
+        }
+
+        nodes
+    }
+
+    fn create_honeycomb_layout() -> Vec<Self> {
+        let texts = vec![String::new(); 19];
+        Self::create_honeycomb_layout_with_data(texts)
+    }
+
+    fn load_honeycomb_data() -> Vec<Self> {
+        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
+            if let Ok(data) = toml::from_str::<HoneycombData>(&contents) {
+                return Self::create_honeycomb_layout_with_data(data.nodes);
+            }
+        }
+        Self::create_honeycomb_layout()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct HoneycombData {
     nodes: Vec<String>,
@@ -170,6 +255,17 @@ impl Default for ListData {
             ],
             lessons: [String::new(), String::new(), String::new()],
         }
+    }
+}
+
+impl ListData {
+    fn load_list_data() -> Self {
+        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
+            if let Ok(data) = toml::from_str::<ListData>(&contents) {
+                return data;
+            }
+        }
+        ListData::default()
     }
 }
 
@@ -283,9 +379,6 @@ pub struct App {
 
 impl App {
     pub fn new() -> App {
-        let honeycomb_nodes = Self::load_honeycomb_data();
-        let list_data = Self::load_list_data();
-
         App {
             white_balls: 0,
             red_balls: 0,
@@ -323,7 +416,7 @@ impl App {
             resources_area: [Rect::default(), Rect::default()],
             lections_area: [Rect::default(), Rect::default(), Rect::default()],
             // Honeycomb grid
-            honeycomb_nodes,
+            honeycomb_nodes: HoneycombNode::load_honeycomb_data(),
             selected_node: Some(9), // central node: archetipo
             editing_node: false,
             node_edit_buffer: String::new(),
@@ -333,7 +426,7 @@ impl App {
             random_mode: false,
             forced_four_mode: false,
             // List tab data
-            list_data,
+            list_data: ListData::load_list_data(),
             list_vertical_scroll: [0, 0, 0], // each lesson have teir own scrollbar
             list_vertical_scroll_state: [
                 ScrollbarState::default(),
@@ -345,24 +438,6 @@ impl App {
             list_edit_buffer: String::new(),
             additional_red_balls: [0, 0, 0, 0], // vector to store additional difficulties associated to active misfortune
         }
-    }
-
-    fn load_honeycomb_data() -> Vec<HoneycombNode> {
-        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
-            if let Ok(data) = toml::from_str::<HoneycombData>(&contents) {
-                return Self::create_honeycomb_layout_with_data(data.nodes);
-            }
-        }
-        Self::create_honeycomb_layout()
-    }
-
-    fn load_list_data() -> ListData {
-        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
-            if let Ok(data) = toml::from_str::<ListData>(&contents) {
-                return data;
-            }
-        }
-        ListData::default()
     }
 
     fn save_data(&self) {
@@ -384,82 +459,12 @@ impl App {
         let _ = fs::write(DATA_FILE, string);
     }
 
-    fn create_honeycomb_layout() -> Vec<HoneycombNode> {
-        let texts = vec![String::new(); 19];
-        Self::create_honeycomb_layout_with_data(texts)
-    }
-
-    fn create_honeycomb_layout_with_data(texts: Vec<String>) -> Vec<HoneycombNode> {
-        let mut nodes = Vec::new();
-        let node_width = 14; // 12
-        let node_height = 6; // 6
-        let spacing_x = 0;
-        let spacing_y = 0;
-        let total_width = node_width + spacing_x;
-        let total_height = node_height + spacing_y;
-
-        //            /‾‾‾\             5 //              |‾‾‾‾|
-        //       /‾‾‾\\___//‾‾‾\        4 //        |‾‾‾‾||____||‾‾‾‾|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   3 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/   2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/   0 //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  -1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/  -2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //       \___//‾‾‾\\___/       -3 //        |____||‾‾‾‾||____|
-        //            \___/            -4 //              |____|
-        //   -2   -1    0    1    2      //    -2    -1     0     1     2
-        let positions = [
-            // column -2
-            (-2, -2),
-            (-2, 0),
-            (-2, 2), // 0,1,2
-            // column -1
-            (-1, -3),
-            (-1, -1),
-            (-1, 1),
-            (-1, 3), // 3,4,5,6
-            // column 0
-            (0, -4),
-            (0, -2),
-            (0, 0),
-            (0, 2),
-            (0, 4), // 7,8,9,10,11
-            // column 1
-            (1, -3),
-            (1, -1),
-            (1, 1),
-            (1, 3), // 12,13,14,15
-            // column 2
-            (2, -2),
-            (2, 0),
-            (2, 2), // 16,17,18
-        ];
-
-        for (i, &(col, row)) in positions.iter().enumerate() {
-            let text = if i < texts.len() {
-                texts[i].clone()
-            } else {
-                String::new()
-            };
-
-            nodes.push(HoneycombNode {
-                text,
-                x: col * total_width as i16,
-                y: (row * total_height as i16) / 2,
-                width: node_width,
-                height: node_height,
-            });
-        }
-
-        nodes
-    }
-
-    pub fn handle_node_click(&mut self, x: u16, y: u16, graph_area: &Rect) {
+    pub fn handle_node_click(&mut self, x: u16, y: u16) {
         if self.current_tab != TabType::CharacterSheetTab || self.editing_node {
             return;
         }
 
+        let graph_area = self.graph_area;
         let inner_area = Rect {
             x: graph_area.x + 1,
             y: graph_area.y + 1,
@@ -468,7 +473,7 @@ impl App {
         };
 
         // Check if area is too small
-        if inner_area.width < 30 || inner_area.height < 20 {
+        if inner_area.width < 20 || inner_area.height < 10 {
             return;
         }
 
@@ -715,9 +720,9 @@ impl App {
                 } else if is_inside(x, y, &self.forced_four_area) {
                     self.forced_four_mode = !self.forced_four_mode;
                     if self.forced_four_mode {
-                        self.draw_count = 4;
+                        self.draw_count = MAX_DRAW;
                     } else {
-                        self.draw_count = 1;
+                        self.draw_count = MIN_DRAW;
                     }
                 }
             }
@@ -748,18 +753,18 @@ impl App {
         match self.focused_section {
             FocusedSection::WhiteBalls => {
                 // 20 token as hard cap
-                if self.white_balls < 20 {
+                if self.white_balls < MAX_TOKEN {
                     self.white_balls += 1;
                 }
             }
             FocusedSection::RedBalls => {
                 // 20 token as hard cap
-                if self.red_balls < 20 {
+                if self.red_balls < MAX_TOKEN {
                     self.red_balls += 1;
                 }
             }
             FocusedSection::DrawInput => {
-                if self.draw_count < 4 && !self.forced_four_mode {
+                if self.draw_count < MAX_DRAW && !self.forced_four_mode {
                     self.draw_count += 1;
                 }
             }
@@ -785,7 +790,7 @@ impl App {
                         self.red_balls -= 1;
                     } else {
                         // remove first (in order) additional difficult from misfortunes
-                        for (i,d) in self.additional_red_balls.clone().iter().enumerate() {
+                        for (i, d) in self.additional_red_balls.clone().iter().enumerate() {
                             if *d > 0 {
                                 self.red_balls -= *d;
                                 self.additional_red_balls[i] = 0;
@@ -796,7 +801,7 @@ impl App {
                 }
             }
             FocusedSection::DrawInput => {
-                if self.draw_count > 1 && !self.forced_four_mode {
+                if self.draw_count > MIN_DRAW && !self.forced_four_mode {
                     self.draw_count -= 1;
                 }
             }
@@ -972,7 +977,7 @@ impl App {
                 }
                 _ => {
                     self.selected_node = Some(idx - 1);
-                } 
+                }
             }
         }
     }
@@ -997,7 +1002,7 @@ impl App {
                 }
                 _ => {
                     self.selected_node = Some(idx + 1);
-                } 
+                }
             }
         }
     }
