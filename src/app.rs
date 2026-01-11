@@ -464,13 +464,7 @@ impl App {
             return;
         }
 
-        let graph_area = self.graph_area;
-        let inner_area = Rect {
-            x: graph_area.x + 1,
-            y: graph_area.y + 1,
-            width: graph_area.width.saturating_sub(2),
-            height: graph_area.height.saturating_sub(2),
-        };
+        let inner_area = self.graph_area;
 
         // Check if area is too small
         if inner_area.width < 20 || inner_area.height < 10 {
@@ -478,8 +472,8 @@ impl App {
         }
 
         // Calculate center offset
-        let center_x = (inner_area.x + inner_area.width) / 2;
-        let center_y = (inner_area.y + inner_area.height) / 2;
+        let center_x = (inner_area.x / 2 + inner_area.width) / 2;
+        let center_y = (inner_area.y / 2 + inner_area.height) / 2;
 
         for (i, node) in self.honeycomb_nodes.iter().enumerate() {
             let node_x_calc = center_x as i32 + node.x as i32;

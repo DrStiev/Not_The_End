@@ -518,8 +518,8 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Calculate center of the area
-    let center_x = (inner_area.x + inner_area.width) / 2;
-    let center_y = (inner_area.y + inner_area.height) / 2;
+    let center_x = (inner_area.x / 2 + inner_area.width) / 2;
+    let center_y = (inner_area.y / 2 + inner_area.height) / 2;
 
     // Render each node
     for (i, node) in app.honeycomb_nodes.iter().enumerate() {
