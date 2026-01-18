@@ -131,7 +131,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     };
 
     let white_block = Block::default()
-        .title(" Quanti TRATTI vuoi usare? (↑/↓) ")
+        .title(" Quanti TRATTI vuoi usare? (↑/↓ per selezionare) ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .style(white_style);
@@ -153,7 +153,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     };
 
     let red_block = Block::default()
-        .title(" Quanto è DIFFICILE la prova? (↑/↓) ")
+        .title(" Quanto è DIFFICILE la prova? (↑/↓ per selezionare) ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .style(red_style);
@@ -175,7 +175,7 @@ fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     };
 
     let draw_block = Block::default()
-        .title(" Effettua una PROVA (↑/↓ poi Enter) ")
+        .title(" Effettua una PROVA (↑/↓ per selezionare, poi Enter) ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .style(draw_style);
@@ -496,7 +496,7 @@ fn graph_node_title(idx: usize) -> String {
 fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let block = Block::default()
         .title(
-            " Scheda HexSys (Click per SELEZIONARE, Enter per MODIFICARE, E per ATTIVARE Tratto) ",
+            " Scheda HexSys (Click per Selezionare, Enter per Modificare, E per Attivare Tratto) ",
         )
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -714,7 +714,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         f.render_widget(paragraph, misfortunes_red_balls_layout[i]);
     }
 
-    // Resources section (2 lists of 5)
+    // Resources section
     #[allow(unused_assignments)]
     let mut items: Vec<Line> = vec![
         Line::from(Span::styled("[Vuoto]", Style::default())),
@@ -723,7 +723,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Line::from(Span::styled("[Vuoto]", Style::default())),
         Line::from(Span::styled("[Vuoto]", Style::default())),
     ];
-    let mut style_arr: [Style; 2] = [Style::default(), Style::default()];
+    let mut style_v = Style::default();
     let resources_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -731,8 +731,8 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
 
     if let Some((section, _)) = app.selected_list_item {
         match section {
-            ListSection::LxResources | ListSection::RxResources => {
-                style_arr[section.idx() - 2] = Style::default()
+            ListSection::LxResources => {
+                style_v = Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD);
             }
@@ -740,37 +740,58 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         }
     }
 
-    for j in 2..4 {
-        let block = Block::default()
-            .title(" Di quali RISORSE dispongo? ")
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(style_arr[j - 2]);
+    // modify resource list
+    let block = Block::default()
+        .title(" Di quali RISORSE dispongo? (↑/↓ per scorrere) ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(style_v);
 
-        if j == 2 {
-            // modify left list
-            items = app
-                .list_data
-                .left_resources
-                .iter()
-                .enumerate()
-                .map(|(i, text)| render_list_items(j, i, text, app.selected_list_item))
-                .collect();
-        } else {
-            // modify right list
-            items = app
-                .list_data
-                .right_resources
-                .iter()
-                .enumerate()
-                .map(|(i, text)| render_list_items(j, i, text, app.selected_list_item))
-                .collect();
-        }
+    items = app
+        .list_data
+        .left_resources
+        .iter()
+        .enumerate()
+        .map(|(i, text)| render_list_items(2, i, text, app.selected_list_item))
+        .collect();
 
-        let paragraph = Paragraph::new(items).block(block).wrap(Wrap { trim: true });
-        app.resources_area[j - 2] = resources_layout[j - 2];
-        f.render_widget(paragraph, resources_layout[j - 2]);
-    }
+    let paragraph = Paragraph::new(items).block(block).wrap(Wrap { trim: true });
+    app.resources_area[0] = resources_layout[0];
+    f.render_widget(paragraph, resources_layout[0]);
+
+    // Notes section
+    let style_v = style(ListSection::Notes, 0, app.selected_list_item, None);
+
+    let block = Block::default()
+        .title(" NOTE (↑/↓ per scorrere) ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(style_v);
+
+    let text = if app.list_data.notes.is_empty() {
+        "[Vuoto]"
+    } else {
+        &app.list_data.notes
+    };
+
+    let paragraph = Paragraph::new(text)
+        .block(block)
+        .scroll((app.notes_vertical_scroll as u16, 0))
+        .wrap(Wrap { trim: true });
+
+    app.resources_area[1] = resources_layout[1];
+    f.render_widget(paragraph, resources_layout[1]);
+
+    // Render scrollbar
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(Some("↑"))
+        .end_symbol(Some("↓"));
+
+    f.render_stateful_widget(
+        scrollbar,
+        resources_layout[1],
+        &mut app.notes_vertical_scroll_state,
+    );
 
     // Lessons section (3 rectangles)
     let lessons_layout = Layout::default()
@@ -786,7 +807,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         let style = style(ListSection::Lessons, i, app.selected_list_item, None);
 
         let block = Block::default()
-            .title(" LEZIONE ")
+            .title(" LEZIONE (↑/↓ per scorrere) ")
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .style(style);

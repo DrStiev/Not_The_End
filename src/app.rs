@@ -230,7 +230,7 @@ pub struct ListData {
     pub misfortunes: [String; 4],
     pub misfortunes_red_balls: [String; 4],
     pub left_resources: [String; 5],
-    pub right_resources: [String; 5],
+    pub notes: String,
     pub lessons: [String; 3],
 }
 
@@ -246,13 +246,7 @@ impl Default for ListData {
                 String::new(),
                 String::new(),
             ],
-            right_resources: [
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-            ],
+            notes: String::new(),
             lessons: [String::new(), String::new(), String::new()],
         }
     }
@@ -274,7 +268,7 @@ pub enum ListSection {
     Misfortunes,
     MisfortunesDifficult,
     LxResources,
-    RxResources,
+    Notes,
     Lessons,
 }
 
@@ -284,8 +278,8 @@ impl ListSection {
         match *self {
             Misfortunes => MisfortunesDifficult,
             MisfortunesDifficult => LxResources,
-            LxResources => RxResources,
-            RxResources => Lessons,
+            LxResources => Notes,
+            Notes => Lessons,
             Lessons => Misfortunes,
         }
     }
@@ -295,8 +289,8 @@ impl ListSection {
             Misfortunes => Lessons,
             MisfortunesDifficult => Misfortunes,
             LxResources => MisfortunesDifficult,
-            RxResources => LxResources,
-            Lessons => RxResources,
+            Notes => LxResources,
+            Lessons => Notes,
         }
     }
     pub fn vertical(&self) -> Self {
@@ -308,13 +302,14 @@ impl ListSection {
         }
     }
 
+    #[allow(dead_code)]
     pub fn idx(&self) -> usize {
         use ListSection::*;
         match *self {
             Misfortunes => 0,
             MisfortunesDifficult => 1,
             LxResources => 2,
-            RxResources => 3,
+            Notes => 3,
             Lessons => 4,
         }
     }
@@ -324,7 +319,8 @@ impl ListSection {
         match *self {
             Misfortunes => 50,
             MisfortunesDifficult => 2,
-            LxResources | RxResources => 75,
+            LxResources => 75,
+            Notes => 1024,
             Lessons => 500,
         }
     }
@@ -369,6 +365,8 @@ pub struct App {
     pub forced_four_mode: bool,
     // List tab data
     pub list_data: ListData,
+    pub notes_vertical_scroll: usize,
+    pub notes_vertical_scroll_state: ScrollbarState,
     pub list_vertical_scroll: [usize; 3], // each lesson have teir own scrollbar
     pub list_vertical_scroll_state: [ScrollbarState; 3],
     pub selected_list_item: Option<(ListSection, usize)>, // (section Enum, item idx)
@@ -427,6 +425,8 @@ impl App {
             forced_four_mode: false,
             // List tab data
             list_data: ListData::load_list_data(),
+            notes_vertical_scroll: 0,
+            notes_vertical_scroll_state: ScrollbarState::default(),
             list_vertical_scroll: [0, 0, 0], // each lesson have teir own scrollbar
             list_vertical_scroll_state: [
                 ScrollbarState::default(),
@@ -522,7 +522,7 @@ impl App {
                 Misfortunes => self.list_data.misfortunes[idx].clone(),
                 MisfortunesDifficult => self.list_data.misfortunes_red_balls[idx].clone(),
                 LxResources => self.list_data.left_resources[idx].clone(),
-                RxResources => self.list_data.right_resources[idx].clone(),
+                Notes => self.list_data.notes.clone(),
                 Lessons => self.list_data.lessons[idx].clone(),
             };
         }
@@ -544,9 +544,9 @@ impl App {
                     self.list_data.left_resources[idx] =
                         self.list_edit_buffer.clone().trim().to_string()
                 }
-                RxResources => {
-                    self.list_data.right_resources[idx] =
-                        self.list_edit_buffer.clone().trim().to_string()
+                Notes => {
+                    self.list_data.notes = self.list_edit_buffer.clone().trim().to_string();
+                    self.update_notes_vertical_scroll_state();
                 }
                 Lessons => {
                     self.list_data.lessons[idx] = self.list_edit_buffer.clone().trim().to_string();
@@ -691,6 +691,15 @@ impl App {
             self.list_vertical_scroll_state[idx % 3].content_length(content_height);
     }
 
+    fn update_notes_vertical_scroll_state(&mut self) {
+        // Calculate total content height
+        let width = self.resources_area[1].width;
+        let content_height = self.list_data.notes.len() / width as usize;
+        self.notes_vertical_scroll_state = self
+            .notes_vertical_scroll_state
+            .content_length(content_height);
+    }
+
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) {
         // Check tab clicks
         for (i, area) in self.tab_areas.iter().enumerate() {
@@ -728,6 +737,9 @@ impl App {
                     if !self.editing_list_item {
                         if idx < 2 && is_inside(x, y, &self.resources_area[idx]) {
                             self.selected_list_item = Some((get_section_type(idx + 2), 0));
+                            if idx == 1 {
+                                self.update_notes_vertical_scroll_state();
+                            }
                         } else if idx < 3 && is_inside(x, y, &self.lections_area[idx]) {
                             self.selected_list_item = Some((Lessons, idx));
                             self.update_list_vertical_scroll_state(idx);
@@ -814,7 +826,7 @@ impl App {
                         self.selected_list_item = Some((section.next(), 0));
                     }
                 }
-                LxResources | RxResources => {
+                LxResources | Notes => {
                     self.selected_list_item = Some((section.next(), 0));
                 }
                 Lessons => {
@@ -849,7 +861,7 @@ impl App {
                 LxResources => {
                     self.selected_list_item = Some((section.prev(), 3));
                 }
-                RxResources => {
+                Notes => {
                     self.selected_list_item = Some((section.prev(), 0));
                 }
                 Lessons => {
@@ -870,12 +882,18 @@ impl App {
                 Misfortunes | MisfortunesDifficult => {
                     self.selected_list_item = Some((section.vertical(), idx));
                 }
-                LxResources | RxResources => {
+                LxResources => {
                     if idx > 0 {
                         self.selected_list_item = Some((section, idx - 1));
                     } else {
                         self.selected_list_item = Some((section, 4 - idx));
                     }
+                }
+                Notes => {
+                    self.notes_vertical_scroll = self.notes_vertical_scroll.saturating_sub(1);
+                    self.notes_vertical_scroll_state = self
+                        .notes_vertical_scroll_state
+                        .position(self.notes_vertical_scroll);
                 }
                 Lessons => {
                     self.list_vertical_scroll[idx] =
@@ -894,8 +912,18 @@ impl App {
                 Misfortunes | MisfortunesDifficult => {
                     self.selected_list_item = Some((section.vertical(), idx))
                 }
-                LxResources | RxResources => {
+                LxResources => {
                     self.selected_list_item = Some((section, (idx + 1) % 5));
+                }
+                Notes => {
+                    if self.notes_vertical_scroll
+                        < self.list_data.notes.len() / self.resources_area[1].width as usize
+                    {
+                        self.notes_vertical_scroll = self.notes_vertical_scroll.saturating_add(1);
+                        self.notes_vertical_scroll_state = self
+                            .notes_vertical_scroll_state
+                            .position(self.notes_vertical_scroll);
+                    }
                 }
                 Lessons => {
                     if self.list_vertical_scroll[idx]
@@ -1008,7 +1036,7 @@ pub fn get_section_type(idx: usize) -> ListSection {
         0 => Misfortunes,
         1 => MisfortunesDifficult,
         2 => LxResources,
-        3 => RxResources,
+        3 => Notes,
         4 => Lessons,
         _ => Misfortunes,
     }
