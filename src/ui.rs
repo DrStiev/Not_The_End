@@ -63,7 +63,18 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     match app.current_tab {
         TabType::DrawTab => render_draw_tab(f, chunks[1], app),
         TabType::CharacterSheetTab => render_graph_tab(f, chunks[1], app),
-        TabType::AdditionalInfoTab => render_list_tab(f, chunks[1], app),
+        TabType::AdditionalInfoTab => {
+            render_list_tab(f, chunks[1], app);
+            // force ui scrollbar to be visible if section has text
+            if app.list_data.notes.len() > 0 {
+                app.update_notes_vertical_scroll_state();
+            }
+            for i in 0..3 {
+                if app.list_data.lessons[i].len() > 0 {
+                    app.update_list_vertical_scroll_state(i);
+                }
+            }
+        }
         TabType::LogTab => render_history_tab(f, chunks[1], app),
         _ => {}
     }

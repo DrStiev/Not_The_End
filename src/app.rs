@@ -683,7 +683,7 @@ impl App {
         self.vertical_scroll_state = self.vertical_scroll_state.content_length(content_height);
     }
 
-    fn update_list_vertical_scroll_state(&mut self, idx: usize) {
+    pub fn update_list_vertical_scroll_state(&mut self, idx: usize) {
         // use mod (%) operator to ensure that idx stay between 0..2
         let width = self.lections_area[idx % 3].width; // get length of displayed area
         let content_height = self.list_data.lessons[idx % 3].len() / width as usize; // calculate amount of scroll available
@@ -691,7 +691,7 @@ impl App {
             self.list_vertical_scroll_state[idx % 3].content_length(content_height);
     }
 
-    fn update_notes_vertical_scroll_state(&mut self) {
+    pub fn update_notes_vertical_scroll_state(&mut self) {
         // Calculate total content height
         let width = self.resources_area[1].width;
         let content_height = self.list_data.notes.len() / width as usize;
