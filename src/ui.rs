@@ -636,7 +636,7 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .constraints([
             Constraint::Length(8), // Misfortunes
             Constraint::Length(4), // Misfortunes Red Balls
-            Constraint::Length(8), // Resources
+            Constraint::Length(12), // Resources
             Constraint::Min(8),    // Lessons
         ])
         .split(area);
@@ -728,6 +728,11 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     // Resources section
     #[allow(unused_assignments)]
     let mut items: Vec<Line> = vec![
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
+        Line::from(Span::styled("[Vuoto]", Style::default())),
         Line::from(Span::styled("[Vuoto]", Style::default())),
         Line::from(Span::styled("[Vuoto]", Style::default())),
         Line::from(Span::styled("[Vuoto]", Style::default())),
@@ -1187,7 +1192,7 @@ fn draw_list_edit_popup(f: &mut Frame, app: &App) {
 
     let mut text = vec![Line::from("")];
 
-    // handle \n character
+    // handle '\n' character
     let temp = &app.list_edit_buffer;
     let mut curr = 0;
     for (i, c) in temp.chars().enumerate() {

@@ -229,7 +229,7 @@ struct HoneycombData {
 pub struct ListData {
     pub misfortunes: [String; 4],
     pub misfortunes_red_balls: [String; 4],
-    pub left_resources: [String; 5],
+    pub left_resources: [String; 10],
     pub notes: String,
     pub lessons: [String; 3],
 }
@@ -240,6 +240,11 @@ impl Default for ListData {
             misfortunes: [String::new(), String::new(), String::new(), String::new()],
             misfortunes_red_balls: [String::new(), String::new(), String::new(), String::new()],
             left_resources: [
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
                 String::new(),
                 String::new(),
                 String::new(),
@@ -886,7 +891,7 @@ impl App {
                     if idx > 0 {
                         self.selected_list_item = Some((section, idx - 1));
                     } else {
-                        self.selected_list_item = Some((section, 4 - idx));
+                        self.selected_list_item = Some((section, 9 - idx));
                     }
                 }
                 Notes => {
@@ -913,7 +918,7 @@ impl App {
                     self.selected_list_item = Some((section.vertical(), idx))
                 }
                 LxResources => {
-                    self.selected_list_item = Some((section, (idx + 1) % 5));
+                    self.selected_list_item = Some((section, (idx + 1) % 10));
                 }
                 Notes => {
                     if self.notes_vertical_scroll

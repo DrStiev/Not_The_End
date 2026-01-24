@@ -55,13 +55,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                     }
                                 }
                                 TabType::AdditionalInfoTab => {
-                                    if app.editing_list_item {
-                                        if app.list_edit_buffer.len()
-                                            < app.selected_list_item.unwrap().0.item_length()
-                                        {
-                                            app.list_edit_buffer.push('\n');
-                                        }
-                                    } else if app.selected_list_item.is_some() {
+                                    if app.selected_list_item.is_some() {
                                         app.start_list_editing();
                                     }
                                 }
@@ -190,6 +184,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                         },
                         _ => {}
                     }
+                    // inside an input popup
                 } else {
                     match key.code {
                         KeyCode::Esc => {
@@ -227,9 +222,18 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                             PopupType::ConfirmRisk => {
                                 app.perform_risk_draw();
                             }
-                            _ => {}
+                             // if inside an input popup, different from confirmation popup, handle 'n' character
+                            PopupType::None => {
+                                if app.editing_list_item {
+                                    if app.list_edit_buffer.len()
+                                        < app.selected_list_item.unwrap().0.item_length()
+                                    {
+                                        app.list_edit_buffer.push('\n');
+                                    }
+                                }
+                            }
                         },
-
+                        // TODO: handle cursor movement inside input popup with arrow keys
                         _ => {}
                     }
                 }
