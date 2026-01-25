@@ -11,7 +11,11 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
         Event::Key(key) => {
             if key.kind == KeyEventKind::Press {
                 // differentiate from input popup key press and normal key press
-                if !app.editing_node && !app.editing_list_item && !app.editing_character_info && app.popup == PopupType::None {
+                if !app.editing_node
+                    && !app.editing_list_item
+                    && !app.editing_character_info
+                    && app.popup == PopupType::None
+                {
                     match key.code {
                         // if not inside an input popup then activate (R)eset and (Q)uit action
                         KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(true),
@@ -49,11 +53,16 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                     }
                                 }
                                 TabType::CharacterSheetTab => {
-                                    if app.selected_character_info != CharacterSection::None && !app.editing_character_info {
+                                    if app.selected_character_info != CharacterSection::None
+                                        && !app.editing_character_info
+                                    {
                                         app.start_character_editing();
                                     }
                                     // this section do not need to handle '\n' character
-                                    else if app.selected_node.is_some() && !app.editing_node && app.selected_character_info == CharacterSection::None{
+                                    else if app.selected_node.is_some()
+                                        && !app.editing_node
+                                        && app.selected_character_info == CharacterSection::None
+                                    {
                                         app.start_node_editing();
                                     }
                                 }
@@ -235,7 +244,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                 app.node_edit_buffer.pop();
                             } else if app.editing_character_info {
                                 app.character_edit_buffer.pop();
-                            }else if app.editing_list_item {
+                            } else if app.editing_list_item {
                                 app.list_edit_buffer.pop();
                             }
                         }
@@ -265,7 +274,11 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
 
         // handle mouse click event
         Event::Mouse(mouse) => {
-            if app.popup != PopupType::None || app.editing_node || app.editing_list_item || app.editing_character_info {
+            if app.popup != PopupType::None
+                || app.editing_node
+                || app.editing_list_item
+                || app.editing_character_info
+            {
                 return Ok(false);
             }
 

@@ -510,7 +510,7 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(4), // Name and Objective part
+            Constraint::Length(3), // Name and Objective part
             Constraint::Fill(1),   // Honeycomb grid
         ])
         .split(area);
@@ -577,6 +577,7 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     app.character_objective_area = upper_layout[2];
     f.render_widget(paragraph, app.character_objective_area);
 
+    // Honeycomb section
     let block = Block::default()
         .title(
             " Scheda HexSys (Click per Selezionare, Enter per Modificare, E per Attivare Tratto) ",
@@ -607,8 +608,8 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
     // Render each node
     for (i, node) in app.honeycomb_nodes.iter().enumerate() {
         // Calculate node position with proper bounds checking
-        let node_x_calc = center_x as i32 + node.x as i32;
-        let node_y_calc = center_y as i32 + node.y as i32;
+        let node_x_calc = (center_x - node.width / 2) as i32 + node.x as i32;
+        let node_y_calc = (center_y + node.height / 2) as i32 + node.y as i32;
 
         // Skip if node would be outside bounds
         if node_x_calc < inner_area.x as i32
@@ -1234,7 +1235,11 @@ fn draw_node_edit_popup(f: &mut Frame, app: &App) {
         Line::from(vec![
             Span::styled(
                 // function is called only if in node editing or character editing
-                if app.editing_node {&app.node_edit_buffer} else {&app.character_edit_buffer},
+                if app.editing_node {
+                    &app.node_edit_buffer
+                } else {
+                    &app.character_edit_buffer
+                },
                 Style::default().add_modifier(Modifier::BOLD),
             ),
             Span::styled("▌", Style::default().fg(Color::LightYellow)),

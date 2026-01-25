@@ -141,8 +141,8 @@ pub struct HoneycombNode {
 impl HoneycombNode {
     fn create_honeycomb_layout_with_data(texts: Vec<String>) -> Vec<Self> {
         let mut nodes = Vec::new();
-        let node_width = 14; // 12
-        let node_height = 6; // 6
+        let node_width = 14;
+        let node_height = 6;
         let spacing_x = 0;
         let spacing_y = 0;
         let total_width = node_width + spacing_x;
@@ -160,6 +160,12 @@ impl HoneycombNode {
         //            \___/            -4 //              |____|
         //   -2   -1    0    1    2      //    -2    -1     0     1     2
         let positions = [
+            // // core
+            // (0,0),
+            // // inner layer
+            // (0,2),(1,1),(1,-1),(0,-2),(-1,-1),(-1,1),
+            // //outer layer
+            // (0,4),(1,3),(2,2),(2,0),(2,-2),(1,-3),(0,-4),(-1,-3),(-2,-2),(-2,0),(-2,2),(-1,3)
             // column -2
             (-2, -2),
             (-2, 0),
@@ -529,8 +535,8 @@ impl App {
         let center_y = (inner_area.y / 2 + inner_area.height) / 2;
 
         for (i, node) in self.honeycomb_nodes.iter().enumerate() {
-            let node_x_calc = center_x as i32 + node.x as i32;
-            let node_y_calc = center_y as i32 + node.y as i32;
+            let node_x_calc = (center_x - node.width / 2) as i32 + node.x as i32;
+            let node_y_calc = (center_y + node.height / 2) as i32 + node.y as i32;
 
             // Skip if node would be outside bounds
             if node_x_calc < inner_area.x as i32
