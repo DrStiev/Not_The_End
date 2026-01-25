@@ -1,7 +1,7 @@
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind};
 
 // include module ui.rs
-use crate::app::{App, FocusedSection, ListSection, PopupType, TabType};
+use crate::app::{App, CharacterSection, FocusedSection, ListSection, PopupType, TabType};
 use std::io;
 
 // return
@@ -11,7 +11,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
         Event::Key(key) => {
             if key.kind == KeyEventKind::Press {
                 // differentiate from input popup key press and normal key press
-                if !app.editing_node && !app.editing_list_item && app.popup == PopupType::None {
+                if !app.editing_node && !app.editing_list_item && !app.editing_character_info && app.popup == PopupType::None {
                     match key.code {
                         // if not inside an input popup then activate (R)eset and (Q)uit action
                         KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(true),
@@ -49,8 +49,11 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                     }
                                 }
                                 TabType::CharacterSheetTab => {
+                                    if app.selected_character_info != CharacterSection::None && !app.editing_character_info {
+                                        app.start_character_editing();
+                                    }
                                     // this section do not need to handle '\n' character
-                                    if app.selected_node.is_some() && !app.editing_node {
+                                    else if app.selected_node.is_some() && !app.editing_node && app.selected_character_info == CharacterSection::None{
                                         app.start_node_editing();
                                     }
                                 }
@@ -122,7 +125,12 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                 app.focused_section = app.focused_section.next();
                             }
                             TabType::CharacterSheetTab => {
-                                app.next_hex();
+                                if app.selected_character_info != CharacterSection::None {
+                                    app.selected_character_info =
+                                        app.selected_character_info.next();
+                                } else {
+                                    app.next_hex();
+                                }
                             }
                             TabType::AdditionalInfoTab => {
                                 app.next_section();
@@ -135,7 +143,12 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                 app.focused_section = app.focused_section.prev();
                             }
                             TabType::CharacterSheetTab => {
-                                app.prev_hex();
+                                if app.selected_character_info != CharacterSection::None {
+                                    app.selected_character_info =
+                                        app.selected_character_info.next();
+                                } else {
+                                    app.prev_hex();
+                                }
                             }
                             TabType::AdditionalInfoTab => {
                                 app.prev_section();
@@ -148,7 +161,9 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                 app.increment_balls();
                             }
                             TabType::CharacterSheetTab => {
-                                app.up_hex();
+                                if app.selected_character_info == CharacterSection::None {
+                                    app.up_hex();
+                                }
                             }
                             TabType::AdditionalInfoTab => {
                                 app.up_section();
@@ -166,7 +181,9 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                 app.decrement_balls();
                             }
                             TabType::CharacterSheetTab => {
-                                app.down_hex();
+                                if app.selected_character_info == CharacterSection::None {
+                                    app.down_hex();
+                                }
                             }
                             TabType::AdditionalInfoTab => {
                                 app.down_section();
@@ -190,6 +207,8 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                 app.finish_node_editing();
                             } else if app.editing_list_item {
                                 app.finish_list_editing();
+                            } else if app.editing_character_info {
+                                app.finish_character_editing();
                             } else if app.popup == PopupType::ConfirmRisk {
                                 app.cancel_draw();
                             }
@@ -199,9 +218,14 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                         KeyCode::Char(c) => {
                             if app.editing_node && app.node_edit_buffer.len() < 35 {
                                 app.node_edit_buffer.push(c);
+                            } else if app.editing_character_info
+                                && app.character_edit_buffer.len()
+                                    < app.character_base_info.length()
+                            {
+                                app.character_edit_buffer.push(c);
                             } else if app.editing_list_item
                                 && app.list_edit_buffer.len()
-                                    < app.selected_list_item.unwrap().0.item_length()
+                                    < app.selected_list_item.unwrap().0.length()
                             {
                                 app.list_edit_buffer.push(c);
                             }
@@ -209,7 +233,9 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                         KeyCode::Backspace => {
                             if app.editing_node {
                                 app.node_edit_buffer.pop();
-                            } else if app.editing_list_item {
+                            } else if app.editing_character_info {
+                                app.character_edit_buffer.pop();
+                            }else if app.editing_list_item {
                                 app.list_edit_buffer.pop();
                             }
                         }
@@ -224,7 +250,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                             PopupType::None => {
                                 if app.editing_list_item
                                     && app.list_edit_buffer.len()
-                                        < app.selected_list_item.unwrap().0.item_length()
+                                        < app.selected_list_item.unwrap().0.length()
                                 {
                                     app.list_edit_buffer.push('\n');
                                 }
@@ -239,7 +265,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
 
         // handle mouse click event
         Event::Mouse(mouse) => {
-            if app.popup != PopupType::None || app.editing_node || app.editing_list_item {
+            if app.popup != PopupType::None || app.editing_node || app.editing_list_item || app.editing_character_info {
                 return Ok(false);
             }
 
@@ -247,6 +273,7 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                 app.handle_mouse_click(mouse.column, mouse.row);
                 // Also check for node clicks in graph tab
                 if app.current_tab == TabType::CharacterSheetTab {
+                    app.handle_character_click(mouse.column, mouse.row);
                     app.handle_node_click(mouse.column, mouse.row);
                 }
             }

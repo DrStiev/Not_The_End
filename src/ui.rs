@@ -10,7 +10,9 @@ use ratatui::{
 
 use crate::app::get_section_type;
 
-use super::app::{App, BallType, FocusedSection, ListSection, PopupType, TabType};
+use super::app::{
+    App, BallType, CharacterSection, FocusedSection, ListSection, PopupType, TabType,
+};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -25,7 +27,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(" Menù (Tab) "),
+                .title(" Menù (Tab per muoverti) "),
         )
         .select(app.current_tab.idx())
         .style(Style::default().fg(Color::White))
@@ -84,8 +86,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         draw_popup(f, app);
     }
 
-    // Node editing popup
-    if app.editing_node {
+    // Node editing popup or Character info editing popup
+    if app.editing_node || app.editing_character_info {
         draw_node_edit_popup(f, app);
     }
 
@@ -505,6 +507,76 @@ fn graph_node_title(idx: usize) -> String {
 }
 
 fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
+    let main_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(4), // Name and Objective part
+            Constraint::Fill(1),   // Honeycomb grid
+        ])
+        .split(area);
+
+    // Name and Objective section
+    let upper_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(30), // name section
+            Constraint::Fill(1),    // blank
+            Constraint::Length(45), // objective section
+        ])
+        .split(main_layout[0]);
+
+    // Name section
+    let draw_style = if app.selected_character_info == CharacterSection::CharacterName {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    let block = Block::default()
+        .title(" Come mi chiamo? ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(draw_style);
+    let text = if app.character_base_info.name.is_empty() {
+        "[Vuoto]"
+    } else {
+        &app.character_base_info.name
+    };
+    let paragraph = Paragraph::new(text)
+        .block(block)
+        .wrap(Wrap { trim: true })
+        .alignment(Alignment::Center);
+
+    app.character_name_area = upper_layout[0];
+    f.render_widget(paragraph, app.character_name_area);
+
+    // Objective section
+    let draw_style = if app.selected_character_info == CharacterSection::CharacterObjective {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    let block = Block::default()
+        .title(" Per cosa sono disposto a RISCHIARE? ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(draw_style);
+    let text = if app.character_base_info.objective.is_empty() {
+        "[Vuoto]"
+    } else {
+        &app.character_base_info.objective
+    };
+    let paragraph = Paragraph::new(text)
+        .block(block)
+        .wrap(Wrap { trim: true })
+        .alignment(Alignment::Center);
+
+    app.character_objective_area = upper_layout[2];
+    f.render_widget(paragraph, app.character_objective_area);
+
     let block = Block::default()
         .title(
             " Scheda HexSys (Click per Selezionare, Enter per Modificare, E per Attivare Tratto) ",
@@ -512,8 +584,8 @@ fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
-    let inner_area = block.inner(area);
-    f.render_widget(block, area);
+    let inner_area = block.inner(main_layout[1]);
+    f.render_widget(block, main_layout[1]);
 
     // Store area for click detection
     app.graph_area = inner_area;
@@ -1051,14 +1123,6 @@ fn create_draw_section_content(app: &App) -> Vec<Line<'static>> {
         Line::from(""),
     ];
 
-    // lines.push(Line::from(""));
-    // lines.push(Line::from(Span::styled(
-    //     " Quanti TOKEN vuoi ESTRARRE? ",
-    //     Style::default().add_modifier(Modifier::BOLD),
-    // )));
-    // lines.push(create_empty_balls_display(app.draw_count));
-    // lines.push(Line::from(""));
-
     if !app.drawn_balls.is_empty() {
         lines.push(Line::from(""));
         lines.push(Line::from(Span::styled(
@@ -1169,7 +1233,8 @@ fn draw_node_edit_popup(f: &mut Frame, app: &App) {
         Line::from(""),
         Line::from(vec![
             Span::styled(
-                &app.node_edit_buffer,
+                // function is called only if in node editing or character editing
+                if app.editing_node {&app.node_edit_buffer} else {&app.character_edit_buffer},
                 Style::default().add_modifier(Modifier::BOLD),
             ),
             Span::styled("▌", Style::default().fg(Color::LightYellow)),

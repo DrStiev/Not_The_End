@@ -225,6 +225,45 @@ struct HoneycombData {
     nodes: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CharacterSection {
+    None,
+    CharacterName,
+    CharacterObjective,
+}
+
+impl CharacterSection {
+    pub fn next(&self) -> Self {
+        use CharacterSection::*;
+        match *self {
+            CharacterName => CharacterObjective,
+            CharacterObjective => CharacterName,
+            None => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CharacterBaseInformation {
+    pub name: String,
+    pub objective: String,
+}
+
+impl CharacterBaseInformation {
+    pub fn length(&self) -> usize {
+        35
+    }
+
+    fn load_character_base_info() -> Self {
+        if let Ok(contents) = fs::read_to_string(DATA_FILE)
+            && let Ok(data) = toml::from_str::<CharacterBaseInformation>(&contents)
+        {
+            return data;
+        }
+        CharacterBaseInformation::default()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ListData {
     pub misfortunes: [String; 4],
@@ -296,7 +335,7 @@ impl ListSection {
         }
     }
 
-    pub fn item_length(&self) -> usize {
+    pub fn length(&self) -> usize {
         use ListSection::*;
         match *self {
             Misfortunes => 50,
@@ -335,6 +374,13 @@ pub struct App {
     pub misfortunes_red_balls_area: [Rect; 4],
     pub resources_area: [Rect; 2],
     pub lections_area: [Rect; 3],
+    // Character data
+    pub character_base_info: CharacterBaseInformation,
+    pub editing_character_info: bool,
+    pub character_edit_buffer: String,
+    pub selected_character_info: CharacterSection,
+    pub character_name_area: Rect,
+    pub character_objective_area: Rect,
     // Honeycomb grid
     pub honeycomb_nodes: Vec<HoneycombNode>,
     pub selected_node: Option<usize>,
@@ -395,6 +441,13 @@ impl App {
             ],
             resources_area: [Rect::default(), Rect::default()],
             lections_area: [Rect::default(), Rect::default(), Rect::default()],
+            // Character data
+            character_base_info: CharacterBaseInformation::load_character_base_info(),
+            editing_character_info: false,
+            character_edit_buffer: String::new(),
+            selected_character_info: CharacterSection::None,
+            character_name_area: Rect::default(),
+            character_objective_area: Rect::default(),
             // Honeycomb grid
             honeycomb_nodes: HoneycombNode::load_honeycomb_data(),
             selected_node: Some(9), // central node: archetipo
@@ -432,6 +485,9 @@ impl App {
         };
 
         let mut string = String::new();
+        if let Ok(toml_string) = toml::to_string_pretty(&self.character_base_info) {
+            string.push_str(&toml_string);
+        }
         if let Ok(toml_string) = toml::to_string_pretty(&data) {
             string.push_str(&toml_string);
         }
@@ -439,6 +495,21 @@ impl App {
             string.push_str(&toml_string);
         }
         let _ = fs::write(DATA_FILE, string);
+    }
+
+    pub fn handle_character_click(&mut self, x: u16, y: u16) {
+        use CharacterSection::*;
+        if self.current_tab != TabType::CharacterSheetTab || self.editing_character_info {
+            return;
+        }
+
+        if is_inside(x, y, &self.character_name_area) {
+            self.selected_character_info = CharacterName;
+        } else if is_inside(x, y, &self.character_objective_area) {
+            self.selected_character_info = CharacterObjective;
+        } else {
+            self.selected_character_info = None;
+        }
     }
 
     pub fn handle_node_click(&mut self, x: u16, y: u16) {
@@ -477,6 +548,30 @@ impl App {
                 self.selected_node = Some(i);
                 return;
             }
+        }
+    }
+
+    pub fn start_character_editing(&mut self) {
+        if self.selected_character_info != CharacterSection::None {
+            if self.selected_character_info == CharacterSection::CharacterName {
+                self.character_edit_buffer = self.character_base_info.name.clone();
+            } else {
+                self.character_edit_buffer = self.character_base_info.objective.clone();
+            }
+            self.editing_character_info = true;
+        }
+    }
+
+    pub fn finish_character_editing(&mut self) {
+        if self.selected_character_info != CharacterSection::None {
+            if self.selected_character_info == CharacterSection::CharacterName {
+                self.character_base_info.name = self.character_edit_buffer.clone();
+            } else {
+                self.character_base_info.objective = self.character_edit_buffer.clone();
+            }
+            self.save_data();
+            self.editing_character_info = false;
+            self.character_edit_buffer.clear();
         }
     }
 
