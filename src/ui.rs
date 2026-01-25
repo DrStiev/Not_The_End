@@ -66,11 +66,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         TabType::AdditionalInfoTab => {
             render_list_tab(f, chunks[1], app);
             // force ui scrollbar to be visible if section has text
-            if app.list_data.notes.len() > 0 {
+            if !app.list_data.notes.is_empty() {
                 app.update_notes_vertical_scroll_state();
             }
             for i in 0..3 {
-                if app.list_data.lessons[i].len() > 0 {
+                if !app.list_data.lessons[i].is_empty() {
                     app.update_list_vertical_scroll_state(i);
                 }
             }
@@ -634,10 +634,10 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8), // Misfortunes
-            Constraint::Length(4), // Misfortunes Red Balls
+            Constraint::Length(8),  // Misfortunes
+            Constraint::Length(4),  // Misfortunes Red Balls
             Constraint::Length(12), // Resources
-            Constraint::Min(8),    // Lessons
+            Constraint::Min(8),     // Lessons
         ])
         .split(area);
 
@@ -745,15 +745,10 @@ fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(main_layout[2]);
 
-    if let Some((section, _)) = app.selected_list_item {
-        match section {
-            ListSection::LxResources => {
-                style_v = Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD);
-            }
-            _ => {}
-        }
+    if let Some((ListSection::LxResources, _)) = app.selected_list_item {
+        style_v = Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD);
     }
 
     // modify resource list
@@ -903,7 +898,7 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
                 "Tratti della scheda utilizzati: ",
                 Style::default().add_modifier(Modifier::BOLD),
             ),
-            Span::raw(format!("{}", s)),
+            Span::raw(s.to_string()),
         ]));
 
         lines.push(Line::from(""));
@@ -934,7 +929,7 @@ fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
                 "Sventure messe in gioco: ",
                 Style::default().add_modifier(Modifier::BOLD),
             ),
-            Span::raw(format!("{}", s)),
+            Span::raw(s.to_string()),
         ]));
 
         lines.push(Line::from(""));
@@ -1046,15 +1041,23 @@ fn create_empty_balls_display(count: usize) -> Line<'static> {
 }
 
 fn create_draw_section_content(app: &App) -> Vec<Line<'static>> {
-    let mut lines = Vec::new();
+    let mut lines = vec![
+        Line::from(""),
+        Line::from(Span::styled(
+            " Quanti TOKEN vuoi ESTRARRE? ",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        create_empty_balls_display(app.draw_count),
+        Line::from(""),
+    ];
 
-    lines.push(Line::from(""));
-    lines.push(Line::from(Span::styled(
-        " Quanti TOKEN vuoi ESTRARRE? ",
-        Style::default().add_modifier(Modifier::BOLD),
-    )));
-    lines.push(create_empty_balls_display(app.draw_count));
-    lines.push(Line::from(""));
+    // lines.push(Line::from(""));
+    // lines.push(Line::from(Span::styled(
+    //     " Quanti TOKEN vuoi ESTRARRE? ",
+    //     Style::default().add_modifier(Modifier::BOLD),
+    // )));
+    // lines.push(create_empty_balls_display(app.draw_count));
+    // lines.push(Line::from(""));
 
     if !app.drawn_balls.is_empty() {
         lines.push(Line::from(""));
@@ -1195,7 +1198,7 @@ fn draw_list_edit_popup(f: &mut Frame, app: &App) {
     // handle '\n' character
     let temp = &app.list_edit_buffer;
     let mut curr = 0;
-    for (i, c) in temp.chars().enumerate() {
+    for (i, c) in temp.char_indices() {
         if c == '\n' {
             if curr == i {
                 text.push(Line::from(""));

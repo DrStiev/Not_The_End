@@ -89,29 +89,27 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                                 }
                                 // (E)nable misfortune
                                 TabType::AdditionalInfoTab => {
-                                    if let Some((section, idx)) = app.selected_list_item {
-                                        match section {
-                                            ListSection::Misfortunes
-                                            | ListSection::MisfortunesDifficult => {
-                                                // if misfortune is empty, ignore it
-                                                if app.list_data.misfortunes[idx].is_empty() {
-                                                    return Ok(false);
-                                                }
-                                                let value = &app.list_data.misfortunes_red_balls
-                                                    [idx]
-                                                    .trim()
-                                                    .parse::<usize>()
-                                                    .unwrap_or(0); // obtain 0 if NaN
-                                                // check if not used then push and add token, otherwise remove token
-                                                if app.additional_red_balls[idx] != 0 {
-                                                    app.red_balls -= app.additional_red_balls[idx];
-                                                    app.additional_red_balls[idx] = 0;
-                                                } else {
-                                                    app.additional_red_balls[idx] = *value;
-                                                    app.red_balls += app.additional_red_balls[idx];
-                                                }
-                                            }
-                                            _ => {}
+                                    if let Some((
+                                        ListSection::Misfortunes
+                                        | ListSection::MisfortunesDifficult,
+                                        idx,
+                                    )) = app.selected_list_item
+                                    {
+                                        // if misfortune is empty, ignore it
+                                        if app.list_data.misfortunes[idx].is_empty() {
+                                            return Ok(false);
+                                        }
+                                        let value = &app.list_data.misfortunes_red_balls[idx]
+                                            .trim()
+                                            .parse::<usize>()
+                                            .unwrap_or(0); // obtain 0 if NaN
+                                        // check if not used then push and add token, otherwise remove token
+                                        if app.additional_red_balls[idx] != 0 {
+                                            app.red_balls -= app.additional_red_balls[idx];
+                                            app.additional_red_balls[idx] = 0;
+                                        } else {
+                                            app.additional_red_balls[idx] = *value;
+                                            app.red_balls += app.additional_red_balls[idx];
                                         }
                                     }
                                 }
@@ -222,14 +220,13 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                             PopupType::ConfirmRisk => {
                                 app.perform_risk_draw();
                             }
-                             // if inside an input popup, different from confirmation popup, handle 'n' character
+                            // if inside an input popup, different from confirmation popup, handle 'n' character
                             PopupType::None => {
-                                if app.editing_list_item {
-                                    if app.list_edit_buffer.len()
+                                if app.editing_list_item
+                                    && app.list_edit_buffer.len()
                                         < app.selected_list_item.unwrap().0.item_length()
-                                    {
-                                        app.list_edit_buffer.push('\n');
-                                    }
+                                {
+                                    app.list_edit_buffer.push('\n');
                                 }
                             }
                         },
@@ -246,15 +243,12 @@ pub fn handle_key_press(app: &mut App) -> io::Result<bool> {
                 return Ok(false);
             }
 
-            match mouse.kind {
-                MouseEventKind::Down(MouseButton::Left) => {
-                    app.handle_mouse_click(mouse.column, mouse.row);
-                    // Also check for node clicks in graph tab
-                    if app.current_tab == TabType::CharacterSheetTab {
-                        app.handle_node_click(mouse.column, mouse.row);
-                    }
+            if let MouseEventKind::Down(MouseButton::Left) = mouse.kind {
+                app.handle_mouse_click(mouse.column, mouse.row);
+                // Also check for node clicks in graph tab
+                if app.current_tab == TabType::CharacterSheetTab {
+                    app.handle_node_click(mouse.column, mouse.row);
                 }
-                _ => {}
             }
         }
         _ => {}

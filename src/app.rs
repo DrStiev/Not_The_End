@@ -211,10 +211,10 @@ impl HoneycombNode {
     }
 
     fn load_honeycomb_data() -> Vec<Self> {
-        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
-            if let Ok(data) = toml::from_str::<HoneycombData>(&contents) {
-                return Self::create_honeycomb_layout_with_data(data.nodes);
-            }
+        if let Ok(contents) = fs::read_to_string(DATA_FILE)
+            && let Ok(data) = toml::from_str::<HoneycombData>(&contents)
+        {
+            return Self::create_honeycomb_layout_with_data(data.nodes);
         }
         Self::create_honeycomb_layout()
     }
@@ -225,7 +225,7 @@ struct HoneycombData {
     nodes: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ListData {
     pub misfortunes: [String; 4],
     pub misfortunes_red_balls: [String; 4],
@@ -234,35 +234,12 @@ pub struct ListData {
     pub lessons: [String; 3],
 }
 
-impl Default for ListData {
-    fn default() -> Self {
-        ListData {
-            misfortunes: [String::new(), String::new(), String::new(), String::new()],
-            misfortunes_red_balls: [String::new(), String::new(), String::new(), String::new()],
-            left_resources: [
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-            ],
-            notes: String::new(),
-            lessons: [String::new(), String::new(), String::new()],
-        }
-    }
-}
-
 impl ListData {
     fn load_list_data() -> Self {
-        if let Ok(contents) = fs::read_to_string(DATA_FILE) {
-            if let Ok(data) = toml::from_str::<ListData>(&contents) {
-                return data;
-            }
+        if let Ok(contents) = fs::read_to_string(DATA_FILE)
+            && let Ok(data) = toml::from_str::<ListData>(&contents)
+        {
+            return data;
         }
         ListData::default()
     }
@@ -630,7 +607,7 @@ impl App {
             white_balls: self.white_balls,
             traits: self.used_traits.clone(),
             red_balls: self.red_balls,
-            misfortunes: self.additional_red_balls.clone(),
+            misfortunes: self.additional_red_balls,
             first_draw: self.current_first_draw.clone(),
             risked: risk,
             risk_draw: risk_ball,
