@@ -7,13 +7,8 @@ use std::io;
 
 // include module ui.rs
 mod app;
-use crate::app::App;
-
-mod ui;
-use crate::ui::ui;
-
 mod key_handler;
-use crate::key_handler::handle_key_press;
+mod ui;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // when enablebled raw mode:
@@ -25,13 +20,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let mut app = App::new();
+    let mut app = app::App::new();
 
     ratatui::run(|terminal| {
         loop {
-            let _ = terminal.draw(|frame| ui(frame, &mut app));
+            let _ = terminal.draw(|frame| ui::ui(frame, &mut app));
             // should be handled with a '?' operator
-            if handle_key_press(&mut app).unwrap() {
+            if key_handler::handle_key_press(&mut app).unwrap() {
                 // disable raw mode and make console print normally
                 disable_raw_mode()?;
                 execute!(
@@ -53,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     // cargo insta test --review
-    use crate::App;
+    use crate::app::App;
     use crate::ui::ui;
     use insta::assert_snapshot;
     use ratatui::{Terminal, backend::TestBackend};
