@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Tabs},
 };
 
-use crate::app::{App, TabType, PopupType};
+use crate::app::{App, PopupType, TabType};
 
 mod render_draw_tab;
 mod render_graph_tab;
