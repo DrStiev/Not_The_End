@@ -197,3 +197,16 @@ impl App {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_create_pool_normal_mode() {
+        let mut app = App::new();
+        app.white_balls = 5;
+        app.red_balls = 3;
+        app.create_pool();
+        assert_eq!(app.pool.len(), 8);
+    }
+}
