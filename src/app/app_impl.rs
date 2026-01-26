@@ -1,486 +1,19 @@
 use chrono::prelude::*;
 use rand::prelude::IndexedRandom;
 use ratatui::prelude::Rect;
-use ratatui::widgets::ScrollbarState;
-use serde::{Deserialize, Serialize};
-use std::{fmt, fs};
+use std::fs;
+
+use super::app_state::{App, MAX_DRAW, MAX_TOKEN, MIN_DRAW};
+use super::character::CharacterSection;
+use super::history::DrawHistory;
+use super::honeycomb::HoneycombData;
+use super::list::ListSection;
+use super::types::{BallType, FocusedSection, PopupType, TabType};
 
 const DATA_FILE: &str = "character_sheet.toml";
-const MAX_TOKEN: usize = 20;
-const MAX_DRAW: usize = 4;
-const MIN_DRAW: usize = 1;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BallType {
-    White,
-    Red,
-}
-
-impl fmt::Display for BallType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            BallType::White => write!(f, "Successo"),
-            BallType::Red => write!(f, "Complicazione"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum PopupType {
-    None,
-    ConfirmDraw,
-    ConfirmRisk,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TabType {
-    DrawTab,
-    CharacterSheetTab,
-    AdditionalInfoTab,
-    LogTab,
-    None, // default
-}
-
-impl TabType {
-    pub fn next(&self) -> Self {
-        use TabType::*;
-        match *self {
-            DrawTab => CharacterSheetTab,
-            CharacterSheetTab => AdditionalInfoTab,
-            AdditionalInfoTab => LogTab,
-            LogTab => DrawTab,
-            _ => DrawTab,
-        }
-    }
-
-    pub fn idx(&self) -> usize {
-        use TabType::*;
-        match *self {
-            DrawTab => 0,
-            CharacterSheetTab => 1,
-            AdditionalInfoTab => 2,
-            LogTab => 3,
-            None => 0, // if not valid return 0 as default
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum FocusedSection {
-    WhiteBalls,
-    RedBalls,
-    DrawInput,
-    RandomMode,
-    ForcedFour,
-}
-
-impl FocusedSection {
-    pub fn next(&self) -> Self {
-        use FocusedSection::*;
-        match *self {
-            WhiteBalls => RedBalls,
-            RedBalls => RandomMode,
-            DrawInput => WhiteBalls,
-            RandomMode => ForcedFour,
-            ForcedFour => DrawInput,
-        }
-    }
-    pub fn prev(&self) -> Self {
-        use FocusedSection::*;
-        match *self {
-            WhiteBalls => DrawInput,
-            RedBalls => WhiteBalls,
-            DrawInput => ForcedFour,
-            RandomMode => RedBalls,
-            ForcedFour => RandomMode,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DrawHistory {
-    pub time: String,
-    pub white_balls: usize,
-    pub traits: Vec<usize>,
-    pub red_balls: usize,
-    pub misfortunes: [usize; 4],
-    pub first_draw: Vec<BallType>,
-    pub risked: bool,
-    pub risk_draw: Vec<BallType>,
-    pub confused: bool,
-    pub adrenalined: bool,
-}
-
-impl DrawHistory {
-    pub fn format_balls(&self, balls: &[BallType]) -> String {
-        if balls.is_empty() {
-            return String::from("-");
-        }
-
-        balls
-            .iter()
-            .map(|b| b.to_string())
-            .collect::<Vec<_>>()
-            .join(", ")
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HoneycombNode {
-    pub text: String,
-    #[serde(skip)]
-    pub x: i16,
-    #[serde(skip)]
-    pub y: i16,
-    #[serde(skip)]
-    pub width: u16,
-    #[serde(skip)]
-    pub height: u16,
-}
-
-impl HoneycombNode {
-    fn create_honeycomb_layout_with_data(texts: Vec<String>) -> Vec<Self> {
-        let mut nodes = Vec::new();
-        let node_width = 14;
-        let node_height = 6;
-        let spacing_x = 0;
-        let spacing_y = 0;
-        let total_width = node_width + spacing_x;
-        let total_height = node_height + spacing_y;
-
-        //            /‾‾‾\             5 //              |‾‾‾‾|
-        //       /‾‾‾\\___//‾‾‾\        4 //        |‾‾‾‾||____||‾‾‾‾|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   3 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/   2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\   1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/   0 //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //  /‾‾‾\\___//‾‾‾\\___//‾‾‾\  -1 //  |‾‾‾‾||____||‾‾‾‾||____||‾‾‾‾|
-        //  \___//‾‾‾\\___//‾‾‾\\___/  -2 //  |____||‾‾‾‾||____||‾‾‾‾||____|
-        //       \___//‾‾‾\\___/       -3 //        |____||‾‾‾‾||____|
-        //            \___/            -4 //              |____|
-        //   -2   -1    0    1    2      //    -2    -1     0     1     2
-        let positions = [
-            // // core
-            // (0,0),
-            // // inner layer
-            // (0,2),(1,1),(1,-1),(0,-2),(-1,-1),(-1,1),
-            // //outer layer
-            // (0,4),(1,3),(2,2),(2,0),(2,-2),(1,-3),(0,-4),(-1,-3),(-2,-2),(-2,0),(-2,2),(-1,3)
-            // column -2
-            (-2, -2),
-            (-2, 0),
-            (-2, 2), // 0,1,2
-            // column -1
-            (-1, -3),
-            (-1, -1),
-            (-1, 1),
-            (-1, 3), // 3,4,5,6
-            // column 0
-            (0, -4),
-            (0, -2),
-            (0, 0),
-            (0, 2),
-            (0, 4), // 7,8,9,10,11
-            // column 1
-            (1, -3),
-            (1, -1),
-            (1, 1),
-            (1, 3), // 12,13,14,15
-            // column 2
-            (2, -2),
-            (2, 0),
-            (2, 2), // 16,17,18
-        ];
-
-        for (i, &(col, row)) in positions.iter().enumerate() {
-            let text = if i < texts.len() {
-                texts[i].clone()
-            } else {
-                String::new()
-            };
-
-            nodes.push(HoneycombNode {
-                text,
-                x: col * total_width as i16,
-                y: (row * total_height as i16) / 2,
-                width: node_width,
-                height: node_height,
-            });
-        }
-
-        nodes
-    }
-
-    fn create_honeycomb_layout() -> Vec<Self> {
-        let texts = vec![String::new(); 19];
-        Self::create_honeycomb_layout_with_data(texts)
-    }
-
-    fn load_honeycomb_data() -> Vec<Self> {
-        if let Ok(contents) = fs::read_to_string(DATA_FILE)
-            && let Ok(data) = toml::from_str::<HoneycombData>(&contents)
-        {
-            return Self::create_honeycomb_layout_with_data(data.nodes);
-        }
-        Self::create_honeycomb_layout()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct HoneycombData {
-    nodes: Vec<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CharacterSection {
-    None,
-    CharacterName,
-    CharacterObjective,
-}
-
-impl CharacterSection {
-    pub fn next(&self) -> Self {
-        use CharacterSection::*;
-        match *self {
-            CharacterName => CharacterObjective,
-            CharacterObjective => CharacterName,
-            None => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct CharacterBaseInformation {
-    pub name: String,
-    pub objective: String,
-}
-
-impl CharacterBaseInformation {
-    pub fn length(&self) -> usize {
-        35
-    }
-
-    fn load_character_base_info() -> Self {
-        if let Ok(contents) = fs::read_to_string(DATA_FILE)
-            && let Ok(data) = toml::from_str::<CharacterBaseInformation>(&contents)
-        {
-            return data;
-        }
-        CharacterBaseInformation::default()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct ListData {
-    pub misfortunes: [String; 4],
-    pub misfortunes_red_balls: [String; 4],
-    pub left_resources: [String; 10],
-    pub notes: String,
-    pub lessons: [String; 3],
-}
-
-impl ListData {
-    fn load_list_data() -> Self {
-        if let Ok(contents) = fs::read_to_string(DATA_FILE)
-            && let Ok(data) = toml::from_str::<ListData>(&contents)
-        {
-            return data;
-        }
-        ListData::default()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ListSection {
-    Misfortunes,
-    MisfortunesDifficult,
-    LxResources,
-    Notes,
-    Lessons,
-}
-
-impl ListSection {
-    pub fn next(&self) -> Self {
-        use ListSection::*;
-        match *self {
-            Misfortunes => MisfortunesDifficult,
-            MisfortunesDifficult => LxResources,
-            LxResources => Notes,
-            Notes => Lessons,
-            Lessons => Misfortunes,
-        }
-    }
-    pub fn prev(&self) -> Self {
-        use ListSection::*;
-        match *self {
-            Misfortunes => Lessons,
-            MisfortunesDifficult => Misfortunes,
-            LxResources => MisfortunesDifficult,
-            Notes => LxResources,
-            Lessons => Notes,
-        }
-    }
-    pub fn vertical(&self) -> Self {
-        use ListSection::*;
-        match *self {
-            Misfortunes => MisfortunesDifficult,
-            MisfortunesDifficult => Misfortunes,
-            _ => *self,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn idx(&self) -> usize {
-        use ListSection::*;
-        match *self {
-            Misfortunes => 0,
-            MisfortunesDifficult => 1,
-            LxResources => 2,
-            Notes => 3,
-            Lessons => 4,
-        }
-    }
-
-    pub fn length(&self) -> usize {
-        use ListSection::*;
-        match *self {
-            Misfortunes => 50,
-            MisfortunesDifficult => 2,
-            LxResources => 75,
-            Notes => 1024,
-            Lessons => 500,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct App {
-    pub white_balls: usize,
-    pub red_balls: usize,
-    pub draw_count: usize,
-    pub focused_section: FocusedSection,
-    pub popup: PopupType,
-    pub drawn_balls: Vec<BallType>,
-    // pub first_draw_complete: bool,
-    pub pool: Vec<BallType>,
-    pub current_tab: TabType,
-    // Log data
-    pub history: Vec<DrawHistory>,
-    pub current_first_draw: Vec<BallType>,
-    pub vertical_scroll: usize,
-    pub vertical_scroll_state: ScrollbarState,
-    // Areas for mouse interaction
-    pub tab_areas: Vec<Rect>,
-    pub white_balls_area: Rect,
-    pub red_balls_area: Rect,
-    pub draw_input_area: Rect,
-    pub random_mode_area: Rect,
-    pub forced_four_area: Rect,
-    pub misfortunes_area: [Rect; 4],
-    pub misfortunes_red_balls_area: [Rect; 4],
-    pub resources_area: [Rect; 2],
-    pub lections_area: [Rect; 3],
-    // Character data
-    pub character_base_info: CharacterBaseInformation,
-    pub editing_character_info: bool,
-    pub character_edit_buffer: String,
-    pub selected_character_info: CharacterSection,
-    pub character_name_area: Rect,
-    pub character_objective_area: Rect,
-    // Honeycomb grid
-    pub honeycomb_nodes: Vec<HoneycombNode>,
-    pub selected_node: Option<usize>,
-    pub editing_node: bool,
-    pub node_edit_buffer: String,
-    pub graph_area: Rect,        // memorizzo area grafo per rendering
-    pub used_traits: Vec<usize>, // vector to store honeycomb idx when decide to enable trait for draw
-    // New modes
-    pub random_mode: bool,
-    pub forced_four_mode: bool,
-    // List tab data
-    pub list_data: ListData,
-    pub notes_vertical_scroll: usize,
-    pub notes_vertical_scroll_state: ScrollbarState,
-    pub list_vertical_scroll: [usize; 3], // each lesson have teir own scrollbar
-    pub list_vertical_scroll_state: [ScrollbarState; 3],
-    pub selected_list_item: Option<(ListSection, usize)>, // (section Enum, item idx)
-    pub editing_list_item: bool,
-    pub list_edit_buffer: String,
-    pub additional_red_balls: [usize; 4], // vector to store additional difficulties associated to active misfortune
-}
 
 impl App {
-    pub fn new() -> App {
-        App {
-            white_balls: 0,
-            red_balls: 0,
-            draw_count: 1,
-            focused_section: FocusedSection::WhiteBalls,
-            popup: PopupType::None,
-            drawn_balls: Vec::new(),
-            // first_draw_complete: false,
-            pool: Vec::new(),
-            current_tab: TabType::DrawTab,
-            // Log data
-            history: Vec::new(),
-            current_first_draw: Vec::new(),
-            vertical_scroll: 0,
-            vertical_scroll_state: ScrollbarState::default(),
-            // Areas for mouse interaction
-            tab_areas: Vec::new(),
-            white_balls_area: Rect::default(),
-            red_balls_area: Rect::default(),
-            draw_input_area: Rect::default(),
-            random_mode_area: Rect::default(),
-            forced_four_area: Rect::default(),
-            misfortunes_area: [
-                Rect::default(),
-                Rect::default(),
-                Rect::default(),
-                Rect::default(),
-            ],
-            misfortunes_red_balls_area: [
-                Rect::default(),
-                Rect::default(),
-                Rect::default(),
-                Rect::default(),
-            ],
-            resources_area: [Rect::default(), Rect::default()],
-            lections_area: [Rect::default(), Rect::default(), Rect::default()],
-            // Character data
-            character_base_info: CharacterBaseInformation::load_character_base_info(),
-            editing_character_info: false,
-            character_edit_buffer: String::new(),
-            selected_character_info: CharacterSection::None,
-            character_name_area: Rect::default(),
-            character_objective_area: Rect::default(),
-            // Honeycomb grid
-            honeycomb_nodes: HoneycombNode::load_honeycomb_data(),
-            selected_node: Some(9), // central node: archetipo
-            editing_node: false,
-            node_edit_buffer: String::new(),
-            graph_area: Rect::default(), // memorizzo area grafo per rendering
-            used_traits: Vec::new(), // vector to store honeycomb idx when decide to enable trait for draw
-            // New mode
-            random_mode: false,
-            forced_four_mode: false,
-            // List tab data
-            list_data: ListData::load_list_data(),
-            notes_vertical_scroll: 0,
-            notes_vertical_scroll_state: ScrollbarState::default(),
-            list_vertical_scroll: [0, 0, 0], // each lesson have teir own scrollbar
-            list_vertical_scroll_state: [
-                ScrollbarState::default(),
-                ScrollbarState::default(),
-                ScrollbarState::default(),
-            ],
-            selected_list_item: Some((ListSection::Misfortunes, 0)),
-            editing_list_item: false,
-            list_edit_buffer: String::new(),
-            additional_red_balls: [0, 0, 0, 0], // vector to store additional difficulties associated to active misfortune
-        }
-    }
-
+    /// Salva i dati su file TOML
     fn save_data(&self) {
         let data = HoneycombData {
             nodes: self
@@ -503,6 +36,7 @@ impl App {
         let _ = fs::write(DATA_FILE, string);
     }
 
+    /// Gestisce il click del mouse sulle informazioni del personaggio
     pub fn handle_character_click(&mut self, x: u16, y: u16) {
         use CharacterSection::*;
         if self.current_tab != TabType::CharacterSheetTab || self.editing_character_info {
@@ -518,6 +52,7 @@ impl App {
         }
     }
 
+    /// Gestisce il click del mouse sui nodi della griglia esagonale
     pub fn handle_node_click(&mut self, x: u16, y: u16) {
         if self.current_tab != TabType::CharacterSheetTab || self.editing_node {
             return;
@@ -557,6 +92,7 @@ impl App {
         }
     }
 
+    /// Inizia la modifica delle informazioni del personaggio
     pub fn start_character_editing(&mut self) {
         if self.selected_character_info != CharacterSection::None {
             if self.selected_character_info == CharacterSection::CharacterName {
@@ -568,6 +104,7 @@ impl App {
         }
     }
 
+    /// Termina la modifica delle informazioni del personaggio
     pub fn finish_character_editing(&mut self) {
         if self.selected_character_info != CharacterSection::None {
             if self.selected_character_info == CharacterSection::CharacterName {
@@ -581,6 +118,7 @@ impl App {
         }
     }
 
+    /// Inizia la modifica di un nodo della griglia esagonale
     pub fn start_node_editing(&mut self) {
         if let Some(idx) = self.selected_node {
             self.editing_node = true;
@@ -588,6 +126,7 @@ impl App {
         }
     }
 
+    /// Termina la modifica di un nodo della griglia esagonale
     pub fn finish_node_editing(&mut self) {
         if let Some(idx) = self.selected_node {
             self.honeycomb_nodes[idx].text = self.node_edit_buffer.clone().trim().to_string();
@@ -597,6 +136,7 @@ impl App {
         self.node_edit_buffer.clear();
     }
 
+    /// Inizia la modifica di un elemento della lista
     pub fn start_list_editing(&mut self) {
         use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
@@ -611,6 +151,7 @@ impl App {
         }
     }
 
+    /// Termina la modifica di un elemento della lista
     pub fn finish_list_editing(&mut self) {
         use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
@@ -642,25 +183,25 @@ impl App {
         self.list_edit_buffer.clear();
     }
 
+    /// Reset dello stato dell'applicazione
     pub fn reset(&mut self) {
         self.white_balls = 0;
         self.red_balls = 0;
         self.draw_count = 1;
         self.drawn_balls.clear();
-        // self.first_draw_complete = false;
         self.pool.clear();
         self.popup = PopupType::None;
         self.current_first_draw.clear();
         self.forced_four_mode = false;
         self.random_mode = false;
         self.focused_section = FocusedSection::WhiteBalls;
-        // clear array of used traits
         self.used_traits.clear();
         self.selected_node = Some(9); // set selection over archetype
         self.additional_red_balls = [0, 0, 0, 0];
-        self.selected_list_item = Some((ListSection::Misfortunes, 0)); // set selection over element [0,0]
+        self.selected_list_item = Some((ListSection::Misfortunes, 0));
     }
 
+    /// Crea il pool di palline per l'estrazione
     pub fn create_pool(&mut self) {
         use BallType::*;
         self.pool.clear();
@@ -684,6 +225,7 @@ impl App {
         }
     }
 
+    /// Estrae un certo numero di palline dal pool
     pub fn draw_from_pool(&mut self, count: usize) -> Vec<BallType> {
         let mut rng = rand::rng();
         let mut drawn = Vec::new();
@@ -700,9 +242,9 @@ impl App {
         drawn
     }
 
+    /// Aggiunge un'estrazione alla cronologia
     fn add_to_log(&mut self, risk: bool, risk_ball: Vec<BallType>) {
         let local: DateTime<Local> = Local::now();
-        // Aggiungi alla cronologia
         self.history.push(DrawHistory {
             time: local.format("%A %e %B %Y, %T").to_string(),
             white_balls: self.white_balls,
@@ -716,21 +258,19 @@ impl App {
             adrenalined: self.forced_four_mode,
         });
 
-        // after add result to logs clear status modifiers
         self.random_mode = false;
         self.forced_four_mode = false;
-        // clear array of used traits
         self.used_traits.clear();
         self.additional_red_balls = [0, 0, 0, 0];
     }
 
+    /// Esegue la prima estrazione
     pub fn perform_first_draw(&mut self) {
         use PopupType::*;
         self.create_pool();
         let drawn = self.draw_from_pool(self.draw_count);
         self.drawn_balls = drawn.clone();
         self.current_first_draw = drawn;
-        // self.first_draw_complete = true;
 
         if self.drawn_balls.len() < 5 {
             self.popup = ConfirmRisk;
@@ -741,6 +281,7 @@ impl App {
         }
     }
 
+    /// Esegue l'estrazione di rischio
     pub fn perform_risk_draw(&mut self) {
         use PopupType::*;
         let remaining = 5 - self.drawn_balls.len();
@@ -755,27 +296,28 @@ impl App {
         self.popup = None;
     }
 
+    /// Annulla l'estrazione di rischio
     pub fn cancel_draw(&mut self) {
         self.add_to_log(false, Vec::new());
         self.update_vertical_scroll_state();
     }
 
+    /// Aggiorna lo stato della scrollbar verticale per la cronologia
     fn update_vertical_scroll_state(&mut self) {
-        // Calculate total content height (approximately 13 lines per entry)
         let content_height = self.history.len() * 13;
         self.vertical_scroll_state = self.vertical_scroll_state.content_length(content_height);
     }
 
+    /// Aggiorna lo stato della scrollbar verticale per le lezioni
     pub fn update_list_vertical_scroll_state(&mut self, idx: usize) {
-        // use mod (%) operator to ensure that idx stay between 0..2
-        let width = self.lections_area[idx % 3].width; // get length of displayed area
-        let content_height = self.list_data.lessons[idx % 3].len() / width as usize; // calculate amount of scroll available
+        let width = self.lections_area[idx % 3].width;
+        let content_height = self.list_data.lessons[idx % 3].len() / width as usize;
         self.list_vertical_scroll_state[idx % 3] =
             self.list_vertical_scroll_state[idx % 3].content_length(content_height);
     }
 
+    /// Aggiorna lo stato della scrollbar verticale per le note
     pub fn update_notes_vertical_scroll_state(&mut self) {
-        // Calculate total content height
         let width = self.resources_area[1].width;
         let content_height = self.list_data.notes.len() / width as usize;
         self.notes_vertical_scroll_state = self
@@ -783,10 +325,12 @@ impl App {
             .content_length(content_height);
     }
 
+    /// Gestisce il click del mouse
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) {
         // Check tab clicks
         for (i, area) in self.tab_areas.iter().enumerate() {
             if is_inside(x, y, area) {
+                use super::types::get_tab_type;
                 self.current_tab = get_tab_type(i);
                 return;
             }
@@ -813,10 +357,10 @@ impl App {
                 }
             }
             TabType::AdditionalInfoTab => {
+                use super::list::get_section_type;
                 use ListSection::*;
-                // Tab 2 specific areas
+
                 for idx in 0..4 {
-                    // ignore mouse click if I'm in editing mode
                     if !self.editing_list_item {
                         if idx < 2 && is_inside(x, y, &self.resources_area[idx]) {
                             self.selected_list_item = Some((get_section_type(idx + 2), 0));
@@ -838,16 +382,15 @@ impl App {
         }
     }
 
+    /// Incrementa il valore delle palline/estrazioni
     pub fn increment_balls(&mut self) {
         match self.focused_section {
             FocusedSection::WhiteBalls => {
-                // 20 token as hard cap
                 if self.white_balls < MAX_TOKEN {
                     self.white_balls += 1;
                 }
             }
             FocusedSection::RedBalls => {
-                // 20 token as hard cap
                 if self.red_balls < MAX_TOKEN {
                     self.red_balls += 1;
                 }
@@ -861,12 +404,12 @@ impl App {
         }
     }
 
+    /// Decrementa il valore delle palline/estrazioni
     pub fn decrement_balls(&mut self) {
         match self.focused_section {
             FocusedSection::WhiteBalls => {
                 if self.white_balls > 0 {
                     self.white_balls -= 1;
-                    // pop first trait if present. don't care which one
                     if !self.used_traits.is_empty() {
                         let _ = self.used_traits.pop();
                     }
@@ -874,11 +417,9 @@ impl App {
             }
             FocusedSection::RedBalls => {
                 if self.red_balls > 0 {
-                    // first remove normal difficult
                     if self.red_balls > self.additional_red_balls.iter().sum() {
                         self.red_balls -= 1;
                     } else {
-                        // remove first (in order) additional difficult from misfortunes
                         for (i, d) in self.additional_red_balls.clone().iter().enumerate() {
                             if *d > 0 {
                                 self.red_balls -= *d;
@@ -898,6 +439,7 @@ impl App {
         }
     }
 
+    /// Passa alla sezione successiva nelle liste
     pub fn next_section(&mut self) {
         use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
@@ -923,6 +465,7 @@ impl App {
         }
     }
 
+    /// Passa alla sezione precedente nelle liste
     pub fn prev_section(&mut self) {
         use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
@@ -958,6 +501,7 @@ impl App {
         }
     }
 
+    /// Muove la selezione verso l'alto nelle liste
     pub fn up_section(&mut self) {
         use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
@@ -988,6 +532,7 @@ impl App {
         }
     }
 
+    /// Muove la selezione verso il basso nelle liste
     pub fn down_section(&mut self) {
         use ListSection::*;
         if let Some((section, idx)) = self.selected_list_item {
@@ -1022,6 +567,7 @@ impl App {
         }
     }
 
+    /// Passa al nodo esagonale successivo (destra)
     pub fn next_hex(&mut self) {
         if let Some(idx) = self.selected_node {
             match idx {
@@ -1037,11 +583,12 @@ impl App {
                 16..19 => {
                     self.selected_node = Some(idx - 16);
                 }
-                _ => {} // default value
+                _ => {}
             }
         }
     }
 
+    /// Passa al nodo esagonale precedente (sinistra)
     pub fn prev_hex(&mut self) {
         if let Some(idx) = self.selected_node {
             match idx {
@@ -1057,11 +604,12 @@ impl App {
                 0..3 => {
                     self.selected_node = Some(idx + 16);
                 }
-                _ => {} // default value
+                _ => {}
             }
         }
     }
 
+    /// Muove la selezione verso l'alto nella griglia esagonale
     pub fn up_hex(&mut self) {
         if let Some(idx) = self.selected_node {
             match idx {
@@ -1087,6 +635,7 @@ impl App {
         }
     }
 
+    /// Muove la selezione verso il basso nella griglia esagonale
     pub fn down_hex(&mut self) {
         if let Some(idx) = self.selected_node {
             match idx {
@@ -1113,29 +662,7 @@ impl App {
     }
 }
 
-pub fn get_section_type(idx: usize) -> ListSection {
-    use ListSection::*;
-    match idx {
-        0 => Misfortunes,
-        1 => MisfortunesDifficult,
-        2 => LxResources,
-        3 => Notes,
-        4 => Lessons,
-        _ => Misfortunes,
-    }
-}
-
-pub fn get_tab_type(idx: usize) -> TabType {
-    use TabType::*;
-    match idx {
-        0 => DrawTab,
-        1 => CharacterSheetTab,
-        2 => AdditionalInfoTab,
-        3 => LogTab,
-        _ => None,
-    }
-}
-
+/// Verifica se un punto (x, y) è all'interno di un'area
 fn is_inside(x: u16, y: u16, area: &Rect) -> bool {
     x >= area.x && x < area.x + area.width && y >= area.y && y < area.y + area.height
 }
