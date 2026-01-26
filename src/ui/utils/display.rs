@@ -42,3 +42,21 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         ])
         .split(popup_layout[1])[1]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_create_filled_balls_display() {
+        let line = create_filled_balls_display(3, Color::White);
+        assert_eq!(line.spans.len(), 3);
+    }
+    
+    #[test]
+    fn test_centered_rect() {
+        let rect = centered_rect(50, 50, Rect::new(0, 0, 100, 100));
+        assert_eq!(rect.width, 50);
+        assert_eq!(rect.height, 50);
+    }
+}
