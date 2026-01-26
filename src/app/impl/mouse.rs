@@ -66,7 +66,7 @@ impl App {
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) {
         use super::super::list::get_section_type;
         use super::super::types::get_tab_type;
-        
+
         // Check tab clicks
         for (i, area) in self.tab_areas.iter().enumerate() {
             if is_inside(x, y, area) {
@@ -97,7 +97,7 @@ impl App {
             }
             TabType::AdditionalInfoTab => {
                 use ListSection::*;
-                
+
                 for idx in 0..4 {
                     if !self.editing_list_item {
                         if idx < 2 && is_inside(x, y, &self.resources_area[idx]) {

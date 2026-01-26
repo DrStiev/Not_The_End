@@ -1,19 +1,19 @@
 // Moduli interni
-mod types;
+mod app_state;
 mod character;
+mod history;
 mod honeycomb;
 mod list;
-mod history;
-mod app_state;
+mod types;
 
 // Modulo implementazioni (suddiviso in sottomoduli)
 #[path = "impl/mod.rs"]
 mod app_impl;
 
 // Re-export dei tipi pubblici
-pub use types::{BallType, PopupType, TabType, FocusedSection, get_tab_type};
-pub use character::{CharacterSection, CharacterBaseInformation};
-pub use honeycomb::HoneycombNode;
-pub use list::{ListSection, ListData, get_section_type};
+pub use app_state::{App, MAX_DRAW, MAX_TOKEN, MIN_DRAW};
+pub use character::{CharacterBaseInformation, CharacterSection};
 pub use history::DrawHistory;
-pub use app_state::{App, MAX_TOKEN, MAX_DRAW, MIN_DRAW};
+pub use honeycomb::HoneycombNode;
+pub use list::{ListData, ListSection, get_section_type};
+pub use types::{BallType, FocusedSection, PopupType, TabType, get_tab_type};

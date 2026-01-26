@@ -10,7 +10,7 @@ impl App {
     pub fn reset(&mut self) {
         use super::super::list::ListSection;
         use super::super::types::FocusedSection;
-        
+
         self.white_balls = 0;
         self.red_balls = 0;
         self.draw_count = 1;
@@ -138,7 +138,7 @@ impl App {
     pub fn increment_balls(&mut self) {
         use super::super::app_state::MAX_TOKEN;
         use super::super::types::FocusedSection;
-        
+
         match self.focused_section {
             FocusedSection::WhiteBalls => {
                 if self.white_balls < MAX_TOKEN {
@@ -162,7 +162,7 @@ impl App {
     /// Decrementa il valore delle palline/estrazioni
     pub fn decrement_balls(&mut self) {
         use super::super::types::FocusedSection;
-        
+
         match self.focused_section {
             FocusedSection::WhiteBalls => {
                 if self.white_balls > 0 {
@@ -200,7 +200,7 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_create_pool_normal_mode() {
         let mut app = App::new();

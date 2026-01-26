@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::app::{App, BallType};
 
-pub fn render_history_tab(f: &mut Frame, area: Rect, app: &mut App) {
+pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
     let block = Block::default()
         .title(" Log - Cronologia Prove (↑/↓ per scorrere) ")
         .borders(Borders::ALL)

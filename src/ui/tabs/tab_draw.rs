@@ -6,25 +6,132 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph, Wrap},
 };
 
+use super::super::utils::{create_empty_balls_display, create_filled_balls_display};
 use crate::app::{App, BallType, FocusedSection};
 
-pub fn create_filled_balls_display(count: usize, color: Color) -> Line<'static> {
-    let mut spans = Vec::new();
-    for _ in 0..count {
-        spans.push(Span::styled("● ", Style::default().fg(color)));
-    }
-    Line::from(spans)
+/// Renderizza il tab principale per l'estrazione
+pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
+    let main_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(area);
+
+    render_left_section(f, main_layout[0], app);
+    render_right_section(f, main_layout[1], app);
 }
 
-pub fn create_empty_balls_display(count: usize) -> Line<'static> {
-    let mut spans = Vec::new();
-    for _ in 0..count {
-        spans.push(Span::styled("○ ", Style::default().fg(Color::Gray)));
-    }
-    Line::from(spans)
+/// Renderizza la sezione sinistra (palline bianche, rosse, reset, istruzioni)
+fn render_left_section(f: &mut Frame, area: Rect, app: &mut App) {
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage(20), // white balls
+            Constraint::Percentage(20), // red balls
+            Constraint::Percentage(10), // reset
+            Constraint::Percentage(50), // text
+        ])
+        .split(area);
+
+    render_white_balls_section(f, layout[0], app);
+    render_red_balls_section(f, layout[1], app);
+    render_reset_section(f, layout[2], app);
+    render_left_instructions(f, layout[3]);
 }
 
-fn create_draw_section_content(app: &App) -> Vec<Line<'static>> {
+/// Renderizza la sezione destra (estrazione, stati, istruzioni)
+fn render_right_section(f: &mut Frame, area: Rect, app: &mut App) {
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage(30), // draw balls
+            Constraint::Percentage(20), // status (confusione/adrenalina)
+            Constraint::Percentage(50), // text
+        ])
+        .split(area);
+
+    render_draw_section(f, layout[0], app);
+    render_status_section(f, layout[1], app);
+    render_right_instructions(f, layout[2]);
+}
+
+/// Sezione palline bianche (tratti)
+fn render_white_balls_section(f: &mut Frame, area: Rect, app: &mut App) {
+    let style = if app.focused_section == FocusedSection::WhiteBalls {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+
+    let block = Block::default()
+        .title(" Quanti TRATTI vuoi usare? (↑/↓ per selezionare) ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(style);
+
+    let balls_text = create_filled_balls_display(app.white_balls, Color::White);
+    let paragraph = Paragraph::new(balls_text)
+        .block(block)
+        .alignment(Alignment::Center);
+
+    app.white_balls_area = area;
+    f.render_widget(paragraph, area);
+}
+
+/// Sezione palline rosse (difficoltà)
+fn render_red_balls_section(f: &mut Frame, area: Rect, app: &mut App) {
+    let style = if app.focused_section == FocusedSection::RedBalls {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+
+    let block = Block::default()
+        .title(" Quanto è DIFFICILE la prova? (↑/↓ per selezionare) ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(style);
+
+    let balls_text = create_filled_balls_display(app.red_balls, Color::Red);
+    let paragraph = Paragraph::new(balls_text)
+        .block(block)
+        .alignment(Alignment::Center);
+
+    app.red_balls_area = area;
+    f.render_widget(paragraph, area);
+}
+
+/// Sezione estrazione
+fn render_draw_section(f: &mut Frame, area: Rect, app: &mut App) {
+    let style = if app.focused_section == FocusedSection::DrawInput {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+
+    let block = Block::default()
+        .title(" Effettua una PROVA (↑/↓ per selezionare, poi Enter) ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(style);
+
+    let content = create_draw_content(app);
+    let paragraph = Paragraph::new(content)
+        .block(block)
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true });
+
+    app.draw_input_area = area;
+    f.render_widget(paragraph, area);
+}
+
+/// Crea il contenuto della sezione estrazione
+fn create_draw_content(app: &App) -> Vec<Line<'static>> {
     let mut lines = vec![
         Line::from(""),
         Line::from(Span::styled(
@@ -56,112 +163,23 @@ fn create_draw_section_content(app: &App) -> Vec<Line<'static>> {
     lines
 }
 
-pub fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
-    let main_layout = Layout::default()
+/// Sezione stati (Confusione e Adrenalina)
+fn render_status_section(f: &mut Frame, area: Rect, app: &mut App) {
+    let layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(area);
 
-    let left_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(20), // white balls
-            Constraint::Percentage(20), // red balls
-            Constraint::Percentage(10), // reset
-            Constraint::Percentage(50), // text
-        ])
-        .split(main_layout[0]);
+    app.random_mode_area = layout[0];
+    app.forced_four_area = layout[1];
 
-    let right_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(30), // draw balls
-            Constraint::Percentage(20), // status
-            Constraint::Percentage(50), // text
-        ])
-        .split(main_layout[1]);
+    render_confusion_button(f, layout[0], app);
+    render_adrenaline_button(f, layout[1], app);
+}
 
-    let right_middle_layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(right_layout[1]);
-
-    // Store areas for mouse interaction (entire widget including borders)
-    app.white_balls_area = left_layout[0];
-    app.red_balls_area = left_layout[1];
-    app.random_mode_area = right_middle_layout[0];
-    app.forced_four_area = right_middle_layout[1];
-    app.draw_input_area = right_layout[0];
-
-    // Sezione pallini bianchi
-    let white_style = if app.focused_section == FocusedSection::WhiteBalls {
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default()
-    };
-
-    let white_block = Block::default()
-        .title(" Quanti TRATTI vuoi usare? (↑/↓ per selezionare) ")
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .style(white_style);
-
-    let white_balls_text = create_filled_balls_display(app.white_balls, Color::White);
-    let white_paragraph = Paragraph::new(white_balls_text)
-        .block(white_block)
-        .alignment(Alignment::Center);
-
-    f.render_widget(white_paragraph, app.white_balls_area);
-
-    // Sezione pallini rossi
-    let red_style = if app.focused_section == FocusedSection::RedBalls {
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default()
-    };
-
-    let red_block = Block::default()
-        .title(" Quanto è DIFFICILE la prova? (↑/↓ per selezionare) ")
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .style(red_style);
-
-    let red_balls_text = create_filled_balls_display(app.red_balls, Color::Red);
-    let red_paragraph = Paragraph::new(red_balls_text)
-        .block(red_block)
-        .alignment(Alignment::Center);
-
-    f.render_widget(red_paragraph, app.red_balls_area);
-
-    // Sezione pescata
-    let draw_style = if app.focused_section == FocusedSection::DrawInput {
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default()
-    };
-
-    let draw_block = Block::default()
-        .title(" Effettua una PROVA (↑/↓ per selezionare, poi Enter) ")
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .style(draw_style);
-
-    let draw_content = create_draw_section_content(app);
-    let draw_paragraph = Paragraph::new(draw_content)
-        .block(draw_block)
-        .alignment(Alignment::Center)
-        .wrap(Wrap { trim: true });
-
-    f.render_widget(draw_paragraph, app.draw_input_area);
-
-    // Bottone Confusione
-    let confusion_style = if app.focused_section == FocusedSection::RandomMode {
+/// Bottone Confusione
+fn render_confusion_button(f: &mut Frame, area: Rect, app: &App) {
+    let style = if app.focused_section == FocusedSection::RandomMode {
         Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD)
@@ -173,13 +191,13 @@ pub fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Style::default()
     };
 
-    let confusion_block = Block::default()
+    let block = Block::default()
         .title(" Confusione ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .style(confusion_style);
+        .style(style);
 
-    let confusion_text = Line::from(vec![
+    let text = Line::from(vec![
         Span::styled("Nella ", Style::default()),
         Span::styled("prossima ", Style::default()),
         Span::styled("PROVA", Style::default()),
@@ -193,15 +211,17 @@ pub fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled(" .", Style::default()),
     ]);
 
-    let confusion_paragraph = Paragraph::new(confusion_text)
-        .block(confusion_block)
+    let paragraph = Paragraph::new(text)
+        .block(block)
         .alignment(Alignment::Center)
         .wrap(Wrap { trim: true });
 
-    f.render_widget(confusion_paragraph, right_middle_layout[0]);
+    f.render_widget(paragraph, area);
+}
 
-    // Bottone Adrenalina
-    let adrenalin_style = if app.focused_section == FocusedSection::ForcedFour {
+/// Bottone Adrenalina
+fn render_adrenaline_button(f: &mut Frame, area: Rect, app: &App) {
+    let style = if app.focused_section == FocusedSection::ForcedFour {
         Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD)
@@ -212,43 +232,48 @@ pub fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
     } else {
         Style::default()
     };
-    let adrenalin_block = Block::default()
+
+    let block = Block::default()
         .title(" Adrenalina ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .style(adrenalin_style);
+        .style(style);
 
-    let adrenalin_text = Line::from(vec![
+    let text = Line::from(vec![
         Span::styled("Nella ", Style::default()),
         Span::styled("prossima ", Style::default()),
         Span::styled("PROVA", Style::default()),
-        Span::styled(" dovrai ", Style::default()),
-        Span::styled("ESTRARRE", Style::default()),
-        Span::styled(" almeno ", Style::default()),
-        Span::styled("4 ", Style::default()),
-        Span::styled("○", Style::default().fg(Color::Gray)),
-        Span::styled(" .", Style::default()),
+        Span::styled(" aggiungi ", Style::default()),
+        Span::styled("4", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(" ●", Style::default().fg(Color::White)),
+        Span::styled(" al ", Style::default()),
+        Span::styled("POOL ", Style::default()),
+        Span::styled("invece ", Style::default()),
+        Span::styled("di ", Style::default()),
+        Span::styled("scegliere.", Style::default()),
     ]);
 
-    let adrenalin_paragraph = Paragraph::new(adrenalin_text)
-        .block(adrenalin_block)
+    let paragraph = Paragraph::new(text)
+        .block(block)
         .alignment(Alignment::Center)
         .wrap(Wrap { trim: true });
 
-    f.render_widget(adrenalin_paragraph, right_middle_layout[1]);
+    f.render_widget(paragraph, area);
+}
 
-    // Bottone reset / quit
-    let reset_block = Block::default()
-        .title(" Reset (R) / Quit (Q) ")
+/// Sezione reset
+fn render_reset_section(f: &mut Frame, area: Rect, _app: &App) {
+    let block = Block::default()
+        .title(" Azioni ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
-    let reset_text = Line::from(vec![
+    let text = Line::from(vec![
         Span::styled("Premi ", Style::default()),
         Span::styled(
             "R",
             Style::default()
-                .fg(Color::Green)
+                .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(" per resettare.", Style::default()),
@@ -260,14 +285,16 @@ pub fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         Span::styled(" per uscire.", Style::default()),
     ]);
 
-    let reset_paragraph = Paragraph::new(reset_text)
-        .block(reset_block)
+    let paragraph = Paragraph::new(text)
+        .block(block)
         .alignment(Alignment::Center);
 
-    f.render_widget(reset_paragraph, left_layout[2]);
+    f.render_widget(paragraph, area);
+}
 
-    // text area left
-    let text_block = Block::default()
+/// Istruzioni sezione sinistra
+fn render_left_instructions(f: &mut Frame, area: Rect) {
+    let block = Block::default()
         .title(" Ricorda... ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -351,15 +378,17 @@ pub fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         ]),
     ];
 
-    let text_paragraph = Paragraph::new(text)
-        .block(text_block)
+    let paragraph = Paragraph::new(text)
+        .block(block)
         .alignment(Alignment::Left)
         .wrap(Wrap { trim: true });
 
-    f.render_widget(text_paragraph, left_layout[3]);
+    f.render_widget(paragraph, area);
+}
 
-    // text area right
-    let text_block = Block::default()
+/// Istruzioni sezione destra
+fn render_right_instructions(f: &mut Frame, area: Rect) {
+    let block = Block::default()
         .title(" Ricorda... ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
@@ -446,10 +475,10 @@ pub fn render_draw_tab(f: &mut Frame, area: Rect, app: &mut App) {
         ]),
     ];
 
-    let text_paragraph = Paragraph::new(text)
-        .block(text_block)
+    let paragraph = Paragraph::new(text)
+        .block(block)
         .alignment(Alignment::Left)
         .wrap(Wrap { trim: true });
 
-    f.render_widget(text_paragraph, right_layout[2]);
+    f.render_widget(paragraph, area);
 }

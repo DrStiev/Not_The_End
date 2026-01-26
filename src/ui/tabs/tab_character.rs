@@ -19,7 +19,7 @@ fn graph_node_title(idx: usize) -> String {
     }
 }
 
-pub fn render_graph_tab(f: &mut Frame, area: Rect, app: &mut App) {
+pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

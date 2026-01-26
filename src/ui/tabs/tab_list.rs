@@ -6,15 +6,8 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph, Scrollbar, ScrollbarOrientation, Wrap},
 };
 
+use super::super::utils::create_filled_balls_display;
 use crate::app::{App, ListSection, get_section_type};
-
-pub fn create_filled_balls_display(count: usize, color: Color) -> Line<'static> {
-    let mut spans = Vec::new();
-    for _ in 0..count {
-        spans.push(Span::styled("● ", Style::default().fg(color)));
-    }
-    Line::from(spans)
-}
 
 fn render_list_items<'a>(
     list_idx: usize,
@@ -53,7 +46,7 @@ fn style(
     }
 }
 
-pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
+pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -63,7 +56,13 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Min(8),     // Lessons
         ])
         .split(area);
+    render_misfortunes_section(f, main_layout[0], app);
+    render_misfortunes_red_balls_section(f, main_layout[1], app);
+    render_resources_section(f, main_layout[2], app);
+    render_lessons_section(f, main_layout[3], app);
+}
 
+pub fn render_misfortunes_section(f: &mut Frame, area: Rect, app: &mut App) {
     // Misfortunes section (4 zones)
     let misfortunes_layout = Layout::default()
         .direction(Direction::Horizontal)
@@ -73,7 +72,7 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Percentage(25),
             Constraint::Percentage(25),
         ])
-        .split(main_layout[0]);
+        .split(area);
 
     for i in 0..4 {
         let style = style(
@@ -103,7 +102,9 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         app.misfortunes_area[i] = misfortunes_layout[i];
         f.render_widget(paragraph, misfortunes_layout[i]);
     }
+}
 
+pub fn render_misfortunes_red_balls_section(f: &mut Frame, area: Rect, app: &mut App) {
     // Misfortunes Red Balls section (4 zones)
     let misfortunes_red_balls_layout = Layout::default()
         .direction(Direction::Horizontal)
@@ -113,7 +114,7 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Percentage(25),
             Constraint::Percentage(25),
         ])
-        .split(main_layout[1]);
+        .split(area);
 
     for i in 0..4 {
         let style = style(
@@ -147,7 +148,9 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         app.misfortunes_red_balls_area[i] = misfortunes_red_balls_layout[i];
         f.render_widget(paragraph, misfortunes_red_balls_layout[i]);
     }
+}
 
+pub fn render_resources_section(f: &mut Frame, area: Rect, app: &mut App) {
     // Resources section
     #[allow(unused_assignments)]
     let mut items: Vec<Line> = vec![
@@ -166,7 +169,7 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
     let resources_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(main_layout[2]);
+        .split(area);
 
     if let Some((ListSection::LxResources, _)) = app.selected_list_item {
         style_v = Style::default()
@@ -226,7 +229,9 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
         resources_layout[1],
         &mut app.notes_vertical_scroll_state,
     );
+}
 
+pub fn render_lessons_section(f: &mut Frame, area: Rect, app: &mut App) {
     // Lessons section (3 rectangles)
     let lessons_layout = Layout::default()
         .direction(Direction::Horizontal)
@@ -235,7 +240,7 @@ pub fn render_list_tab(f: &mut Frame, area: Rect, app: &mut App) {
             Constraint::Percentage(34),
             Constraint::Percentage(33),
         ])
-        .split(main_layout[3]);
+        .split(area);
 
     for i in 0..3 {
         let style = style(ListSection::Lessons, i, app.selected_list_item, None);
