@@ -103,3 +103,105 @@ pub fn get_tab_type(idx: usize) -> TabType {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod types_tests {
+
+    use crate::app::types::*;
+
+    #[test]
+    fn test_ball_type_display() {
+        assert_eq!(BallType::White.to_string(), "Successo");
+        assert_eq!(BallType::Red.to_string(), "Complicazione");
+    }
+
+    #[test]
+    fn test_ball_type_equality() {
+        assert_eq!(BallType::White, BallType::White);
+        assert_eq!(BallType::Red, BallType::Red);
+        assert_ne!(BallType::White, BallType::Red);
+    }
+
+    #[test]
+    fn test_popup_type_none() {
+        let popup = PopupType::None;
+        assert_eq!(popup, PopupType::None);
+    }
+
+    #[test]
+    fn test_popup_type_variants() {
+        assert_ne!(PopupType::ConfirmDraw, PopupType::ConfirmRisk);
+        assert_ne!(PopupType::None, PopupType::ConfirmDraw);
+    }
+
+    #[test]
+    fn test_tab_type_next() {
+        assert_eq!(TabType::DrawTab.next(), TabType::CharacterSheetTab);
+        assert_eq!(
+            TabType::CharacterSheetTab.next(),
+            TabType::AdditionalInfoTab
+        );
+        assert_eq!(TabType::AdditionalInfoTab.next(), TabType::LogTab);
+        assert_eq!(TabType::LogTab.next(), TabType::DrawTab);
+    }
+
+    #[test]
+    fn test_tab_type_next_wraps() {
+        let mut tab = TabType::DrawTab;
+        for _ in 0..4 {
+            tab = tab.next();
+        }
+        assert_eq!(tab, TabType::DrawTab);
+    }
+
+    #[test]
+    fn test_tab_type_idx() {
+        assert_eq!(TabType::DrawTab.idx(), 0);
+        assert_eq!(TabType::CharacterSheetTab.idx(), 1);
+        assert_eq!(TabType::AdditionalInfoTab.idx(), 2);
+        assert_eq!(TabType::LogTab.idx(), 3);
+        assert_eq!(TabType::None.idx(), 0);
+    }
+
+    #[test]
+    fn test_focused_section_next() {
+        assert_eq!(FocusedSection::WhiteBalls.next(), FocusedSection::RedBalls);
+        assert_eq!(FocusedSection::RedBalls.next(), FocusedSection::RandomMode);
+        assert_eq!(
+            FocusedSection::RandomMode.next(),
+            FocusedSection::ForcedFour
+        );
+        assert_eq!(FocusedSection::ForcedFour.next(), FocusedSection::DrawInput);
+        assert_eq!(FocusedSection::DrawInput.next(), FocusedSection::WhiteBalls);
+    }
+
+    #[test]
+    fn test_focused_section_prev() {
+        assert_eq!(FocusedSection::WhiteBalls.prev(), FocusedSection::DrawInput);
+        assert_eq!(FocusedSection::DrawInput.prev(), FocusedSection::ForcedFour);
+        assert_eq!(
+            FocusedSection::ForcedFour.prev(),
+            FocusedSection::RandomMode
+        );
+        assert_eq!(FocusedSection::RandomMode.prev(), FocusedSection::RedBalls);
+        assert_eq!(FocusedSection::RedBalls.prev(), FocusedSection::WhiteBalls);
+    }
+
+    #[test]
+    fn test_focused_section_cycle() {
+        let mut section = FocusedSection::WhiteBalls;
+        for _ in 0..5 {
+            section = section.next();
+        }
+        assert_eq!(section, FocusedSection::WhiteBalls);
+    }
+
+    #[test]
+    fn test_get_tab_type() {
+        assert_eq!(get_tab_type(0), TabType::DrawTab);
+        assert_eq!(get_tab_type(1), TabType::CharacterSheetTab);
+        assert_eq!(get_tab_type(2), TabType::AdditionalInfoTab);
+        assert_eq!(get_tab_type(3), TabType::LogTab);
+        assert_eq!(get_tab_type(99), TabType::None);
+    }
+}

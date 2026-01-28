@@ -11,7 +11,8 @@ mod types;
 mod app_impl;
 
 // Re-export dei tipi pubblici
-pub use app_state::App;
+#[allow(unused_imports)]
+pub use app_state::{App, MAX_DRAW, MAX_TOKEN, MIN_DRAW};
 pub use character::CharacterSection;
 pub use list::{ListSection, get_section_type};
 pub use types::{BallType, FocusedSection, PopupType, TabType};

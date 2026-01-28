@@ -124,8 +124,10 @@ impl App {
 
     /// Annulla l'estrazione di rischio
     pub fn cancel_draw(&mut self) {
+        use PopupType::*;
         self.add_to_log(false, Vec::new());
         self.update_vertical_scroll_state();
+        self.popup = None;
     }
 
     /// Aggiorna lo stato della scrollbar verticale per la cronologia
@@ -198,15 +200,284 @@ impl App {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod draw_tests {
+    use crate::app::{App, BallType, FocusedSection, MAX_DRAW, MAX_TOKEN, MIN_DRAW, PopupType};
+
+    #[test]
+    fn test_reset() {
+        let mut app = App::new();
+        app.white_balls = 5;
+        app.red_balls = 3;
+        app.drawn_balls = vec![BallType::White, BallType::Red];
+        app.random_mode = true;
+        app.forced_four_mode = true;
+
+        app.reset();
+
+        assert_eq!(app.white_balls, 0);
+        assert_eq!(app.red_balls, 0);
+        assert_eq!(app.draw_count, 1);
+        assert!(app.drawn_balls.is_empty());
+        assert!(app.pool.is_empty());
+        assert!(!app.random_mode);
+        assert!(!app.forced_four_mode);
+    }
 
     #[test]
     fn test_create_pool_normal_mode() {
         let mut app = App::new();
         app.white_balls = 5;
         app.red_balls = 3;
+        app.random_mode = false;
+
         app.create_pool();
+
         assert_eq!(app.pool.len(), 8);
+        let white_count = app.pool.iter().filter(|&&b| b == BallType::White).count();
+        let red_count = app.pool.iter().filter(|&&b| b == BallType::Red).count();
+        assert_eq!(white_count, 5);
+        assert_eq!(red_count, 3);
+    }
+
+    #[test]
+    fn test_create_pool_random_mode() {
+        let mut app = App::new();
+        app.white_balls = 10;
+        app.red_balls = 5;
+        app.random_mode = true;
+
+        app.create_pool();
+
+        assert_eq!(app.pool.len(), 15);
+        // In random mode, white balls become random mix of white/red
+    }
+
+    #[test]
+    fn test_draw_from_pool() {
+        let mut app = App::new();
+        app.white_balls = 10;
+        app.red_balls = 5;
+        app.create_pool();
+
+        let initial_pool_size = app.pool.len();
+        let drawn = app.draw_from_pool(3);
+
+        assert_eq!(drawn.len(), 3);
+        assert_eq!(app.pool.len(), initial_pool_size - 3);
+    }
+
+    #[test]
+    fn test_draw_from_pool_more_than_available() {
+        let mut app = App::new();
+        app.white_balls = 2;
+        app.red_balls = 1;
+        app.create_pool();
+
+        let drawn = app.draw_from_pool(10);
+
+        assert_eq!(drawn.len(), 3); // Can only draw what's available
+        assert!(app.pool.is_empty());
+    }
+
+    #[test]
+    fn test_draw_from_empty_pool() {
+        let mut app = App::new();
+        app.create_pool();
+
+        let drawn = app.draw_from_pool(5);
+
+        assert!(drawn.is_empty());
+    }
+
+    #[test]
+    fn test_perform_first_draw_with_risk() {
+        let mut app = App::new();
+        app.white_balls = 5;
+        app.red_balls = 3;
+        app.draw_count = 2;
+
+        app.perform_first_draw();
+
+        assert_eq!(app.drawn_balls.len(), 2);
+        assert_eq!(app.popup, PopupType::ConfirmRisk);
+
+        app.perform_risk_draw();
+        assert_eq!(app.drawn_balls.len(), 5);
+        assert_eq!(app.popup, PopupType::None);
+    }
+
+    #[test]
+    fn test_perform_first_draw_without_risk() {
+        let mut app = App::new();
+        app.white_balls = 10;
+        app.red_balls = 5;
+        app.draw_count = 4;
+        app.forced_four_mode = true;
+
+        app.perform_first_draw();
+
+        assert_eq!(app.drawn_balls.len(), 4);
+        assert_eq!(app.popup, PopupType::ConfirmRisk);
+
+        app.cancel_draw();
+        assert_eq!(app.popup, PopupType::None);
+    }
+
+    #[test]
+    fn test_increment_balls_white() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::WhiteBalls;
+        app.white_balls = 5;
+
+        app.increment_balls();
+
+        assert_eq!(app.white_balls, 6);
+    }
+
+    #[test]
+    fn test_increment_balls_white_max() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::WhiteBalls;
+        app.white_balls = MAX_TOKEN;
+
+        app.increment_balls();
+
+        assert_eq!(app.white_balls, MAX_TOKEN);
+    }
+
+    #[test]
+    fn test_increment_balls_red() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::RedBalls;
+        app.red_balls = 2;
+
+        app.increment_balls();
+
+        assert_eq!(app.red_balls, 3);
+    }
+
+    #[test]
+    fn test_increment_draw_count() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::DrawInput;
+        app.draw_count = 2;
+        app.forced_four_mode = false;
+
+        app.increment_balls();
+
+        assert_eq!(app.draw_count, 3);
+    }
+
+    #[test]
+    fn test_increment_draw_count_max() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::DrawInput;
+        app.draw_count = MAX_DRAW;
+        app.forced_four_mode = false;
+
+        app.increment_balls();
+
+        assert_eq!(app.draw_count, MAX_DRAW);
+    }
+
+    #[test]
+    fn test_increment_draw_count_forced_four() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::DrawInput;
+        app.draw_count = 4;
+        app.forced_four_mode = true;
+
+        app.increment_balls();
+
+        assert_eq!(app.draw_count, 4); // Should not change in forced four mode
+    }
+
+    #[test]
+    fn test_decrement_balls_white() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::WhiteBalls;
+        app.white_balls = 5;
+
+        app.decrement_balls();
+
+        assert_eq!(app.white_balls, 4);
+    }
+
+    #[test]
+    fn test_decrement_balls_white_min() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::WhiteBalls;
+        app.white_balls = 0;
+
+        app.decrement_balls();
+
+        assert_eq!(app.white_balls, 0);
+    }
+
+    #[test]
+    fn test_decrement_balls_red() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::RedBalls;
+        app.red_balls = 5;
+
+        app.decrement_balls();
+
+        assert_eq!(app.red_balls, 4);
+    }
+
+    #[test]
+    fn test_decrement_draw_count() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::DrawInput;
+        app.draw_count = 3;
+        app.forced_four_mode = false;
+
+        app.decrement_balls();
+
+        assert_eq!(app.draw_count, 2);
+    }
+
+    #[test]
+    fn test_decrement_draw_count_min() {
+        let mut app = App::new();
+        app.focused_section = FocusedSection::DrawInput;
+        app.draw_count = MIN_DRAW;
+        app.forced_four_mode = false;
+
+        app.decrement_balls();
+
+        assert_eq!(app.draw_count, MIN_DRAW);
+    }
+
+    #[test]
+    fn test_perform_risk_draw() {
+        let mut app = App::new();
+        app.white_balls = 10;
+        app.red_balls = 5;
+        app.draw_count = 2;
+        app.perform_first_draw();
+
+        assert_eq!(app.drawn_balls.len(), 2);
+        assert_eq!(app.popup, PopupType::ConfirmRisk);
+
+        app.perform_risk_draw();
+
+        assert_eq!(app.drawn_balls.len(), 5);
+        assert_eq!(app.popup, PopupType::None);
+    }
+
+    #[test]
+    fn test_cancel_draw() {
+        let mut app = App::new();
+        app.white_balls = 5;
+        app.red_balls = 3;
+        app.draw_count = 2;
+        app.perform_first_draw();
+
+        let history_len = app.history.len();
+        app.cancel_draw();
+
+        assert_eq!(app.history.len(), history_len + 1);
+        assert_eq!(app.popup, PopupType::None);
     }
 }

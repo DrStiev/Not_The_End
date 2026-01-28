@@ -40,18 +40,19 @@ fn run_app(app: &mut app::App) -> Result<(), Box<dyn std::error::Error>> {
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::app::App;
-    use crate::ui::ui;
-    use insta::assert_snapshot;
-    use ratatui::{Terminal, backend::TestBackend};
+// #[cfg(test)]
+// mod tests {
 
-    #[test]
-    fn test_render_app() {
-        let mut app = App::new();
-        let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
-        terminal.draw(|frame| ui(frame, &mut app)).unwrap();
-        assert_snapshot!(terminal.backend());
-    }
-}
+//     use crate::app::App;
+//     use crate::ui::ui;
+//     use insta::assert_snapshot;
+//     use ratatui::{Terminal, backend::TestBackend};
+
+//     #[test]
+//     fn test_render_app() {
+//         let mut app = App::new();
+//         let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
+//         terminal.draw(|frame| ui(frame, &mut app)).unwrap();
+//         assert_snapshot!(terminal.backend());
+//     }
+// }

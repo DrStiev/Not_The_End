@@ -224,3 +224,204 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod navigation_tests {
+    use crate::app::{App, ListSection};
+
+    #[test]
+    fn test_next_section_misfortunes() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::Misfortunes, 0));
+
+        app.next_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::Misfortunes, 1)));
+    }
+
+    #[test]
+    fn test_next_section_misfortunes_wrap() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::Misfortunes, 3));
+
+        app.next_section();
+
+        assert_eq!(
+            app.selected_list_item,
+            Some((ListSection::MisfortunesDifficult, 0))
+        );
+    }
+
+    #[test]
+    fn test_next_section_lessons() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::Lessons, 0));
+
+        app.next_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::Lessons, 1)));
+    }
+
+    #[test]
+    fn test_next_section_lessons_wrap() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::Lessons, 2));
+
+        app.next_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::Misfortunes, 0)));
+    }
+
+    #[test]
+    fn test_prev_section_misfortunes() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::Misfortunes, 1));
+
+        app.prev_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::Misfortunes, 0)));
+    }
+
+    #[test]
+    fn test_prev_section_misfortunes_wrap() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::Misfortunes, 0));
+
+        app.prev_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::Lessons, 2)));
+    }
+
+    #[test]
+    fn test_next_hex() {
+        let mut app = App::new();
+        app.selected_node = Some(0);
+
+        app.next_hex();
+
+        assert_eq!(app.selected_node, Some(4));
+    }
+
+    #[test]
+    fn test_next_hex_wrap() {
+        let mut app = App::new();
+        app.selected_node = Some(18);
+
+        app.next_hex();
+
+        assert_eq!(app.selected_node, Some(2));
+    }
+
+    #[test]
+    fn test_prev_hex() {
+        let mut app = App::new();
+        app.selected_node = Some(4);
+
+        app.prev_hex();
+
+        assert_eq!(app.selected_node, Some(1));
+    }
+
+    #[test]
+    fn test_prev_hex_wrap() {
+        let mut app = App::new();
+        app.selected_node = Some(0);
+
+        app.prev_hex();
+
+        assert_eq!(app.selected_node, Some(16));
+    }
+
+    #[test]
+    fn test_up_hex() {
+        let mut app = App::new();
+        app.selected_node = Some(5);
+
+        app.up_hex();
+
+        assert_eq!(app.selected_node, Some(4));
+    }
+
+    #[test]
+    fn test_up_hex_wrap() {
+        let mut app = App::new();
+        app.selected_node = Some(0);
+
+        app.up_hex();
+
+        assert_eq!(app.selected_node, Some(2));
+    }
+
+    #[test]
+    fn test_down_hex() {
+        let mut app = App::new();
+        app.selected_node = Some(4);
+
+        app.down_hex();
+
+        assert_eq!(app.selected_node, Some(5));
+    }
+
+    #[test]
+    fn test_down_hex_wrap() {
+        let mut app = App::new();
+        app.selected_node = Some(2);
+
+        app.down_hex();
+
+        assert_eq!(app.selected_node, Some(0));
+    }
+
+    #[test]
+    fn test_up_section_resources() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::LxResources, 5));
+
+        app.up_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::LxResources, 4)));
+    }
+
+    #[test]
+    fn test_up_section_resources_wrap() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::LxResources, 0));
+
+        app.up_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::LxResources, 9)));
+    }
+
+    #[test]
+    fn test_down_section_resources() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::LxResources, 4));
+
+        app.down_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::LxResources, 5)));
+    }
+
+    #[test]
+    fn test_down_section_resources_wrap() {
+        let mut app = App::new();
+        app.selected_list_item = Some((ListSection::LxResources, 9));
+
+        app.down_section();
+
+        assert_eq!(app.selected_list_item, Some((ListSection::LxResources, 0)));
+    }
+
+    #[test]
+    fn test_hex_navigation_cycle() {
+        let mut app = App::new();
+        app.selected_node = Some(9);
+
+        // Test full cycle
+        for _ in 0..19 {
+            app.next_hex();
+        }
+        // Should eventually come back to a valid position
+        assert!(app.selected_node.is_some());
+    }
+}
