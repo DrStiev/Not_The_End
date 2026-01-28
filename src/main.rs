@@ -1,53 +1,47 @@
-use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
-use std::io;
-
-// include module ui.rs
 mod app;
-mod key_handler;
+mod input;
+mod terminal;
 mod ui;
 
+/// Entry point dell'applicazione
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // when enablebled raw mode:
-    // Input will not be forwarded to screen
-    // Input will not be processed on enter press
-    // Input will not be line buffered (input sent byte-by-byte to input buffer)
-    // Special keys like backspace and CTRL+C will not be processed by terminal driver
-    // New line character will not be processed therefore println! can’t be used, use write! instead
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let mut app = app::App::new();
+    // Inizializza il terminale
+    terminal::setup()?;
 
+    // Crea l'applicazione e avvia il loop principale
+    let mut app = app::App::new();
+    // Cleanup è gestito nel match del risultato
+    run_app(&mut app)
+}
+
+/// Loop principale dell'applicazione
+fn run_app(app: &mut app::App) -> Result<(), Box<dyn std::error::Error>> {
     ratatui::run(|terminal| {
         loop {
-            let _ = terminal.draw(|frame| ui::ui(frame, &mut app));
-            // should be handled with a '?' operator
-            if key_handler::handle_key_press(&mut app).unwrap() {
-                // disable raw mode and make console print normally
-                disable_raw_mode()?;
-                execute!(
-                    terminal.backend_mut(),
-                    LeaveAlternateScreen,
-                    DisableMouseCapture
-                )?;
-                terminal.show_cursor()?;
-                // if return value is true then 'Q' or 'q' key has been pressed and application need to quit
-                break Ok(());
+            // Renderizza l'UI
+            let _ = terminal.draw(|frame| ui::ui(frame, app));
+
+            // Gestisci input
+            match input::handle_input(app) {
+                Ok(should_quit) => {
+                    if should_quit {
+                        // Cleanup e termina
+                        terminal::cleanup(terminal)?;
+                        break Ok(());
+                    }
+                }
+                Err(e) => {
+                    // In caso di errore, fai comunque cleanup
+                    let _ = terminal::cleanup(terminal);
+                    break Err(Box::new(e) as Box<dyn std::error::Error>);
+                }
             }
         }
     })
-
-    // disable_raw_mode()?;
-    // Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    // cargo insta test --review
     use crate::app::App;
     use crate::ui::ui;
     use insta::assert_snapshot;
@@ -57,7 +51,6 @@ mod tests {
     fn test_render_app() {
         let mut app = App::new();
         let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
-        // create and run your app/widget here
         terminal.draw(|frame| ui(frame, &mut app)).unwrap();
         assert_snapshot!(terminal.backend());
     }
