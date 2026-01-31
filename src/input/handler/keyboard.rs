@@ -1,6 +1,8 @@
 use crossterm::event::{KeyCode, KeyEvent};
 
-use crate::app::{App, CharacterSection, FocusedSection, ListSection, PopupType, TabType};
+use crate::app::{
+    App, CharacterSection, FocusedSection, ListSection, MAX_DRAW, MIN_DRAW, PopupType, TabType,
+};
 
 /// Gestisce gli eventi della tastiera quando non si è in modalità editing/popup
 pub fn handle_normal_mode(app: &mut App, key: KeyEvent) -> bool {
@@ -96,6 +98,7 @@ fn handle_enable_key(app: &mut App) {
     match app.current_tab {
         TabType::CharacterSheetTab => handle_enable_trait(app),
         TabType::AdditionalInfoTab => handle_enable_misfortune(app),
+        TabType::DrawTab => handle_enable_status(app),
         _ => {}
     }
 }
@@ -142,6 +145,20 @@ fn handle_enable_misfortune(app: &mut App) {
         } else {
             app.additional_red_balls[idx] = value;
             app.red_balls += value;
+        }
+    }
+}
+
+/// Abilita/disabilita uno status
+fn handle_enable_status(app: &mut App) {
+    if app.focused_section == FocusedSection::RandomMode {
+        app.random_mode = !app.random_mode;
+    } else if app.focused_section == FocusedSection::ForcedFour {
+        app.forced_four_mode = !app.forced_four_mode;
+        if app.forced_four_mode {
+            app.draw_count = MAX_DRAW;
+        } else {
+            app.draw_count = MIN_DRAW;
         }
     }
 }

@@ -35,12 +35,12 @@ fn style(
 ) -> Style {
     let is_selected = selected_list_item == Some((section, idx));
 
-    if is_selected {
+    if additional.is_some() && additional.unwrap() {
+        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+    } else if is_selected {
         Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD)
-    } else if additional.is_some() && additional.unwrap() {
-        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
     } else {
         Style::default()
     }

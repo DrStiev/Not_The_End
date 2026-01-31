@@ -179,13 +179,13 @@ fn render_status_section(f: &mut Frame, area: Rect, app: &mut App) {
 
 /// Bottone Confusione
 fn render_confusion_button(f: &mut Frame, area: Rect, app: &App) {
-    let style = if app.focused_section == FocusedSection::RandomMode {
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD)
-    } else if app.random_mode {
+    let style = if app.random_mode {
         Style::default()
             .fg(Color::Green)
+            .add_modifier(Modifier::BOLD)
+    } else if app.focused_section == FocusedSection::RandomMode {
+        Style::default()
+            .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD)
     } else {
         Style::default()
@@ -221,13 +221,13 @@ fn render_confusion_button(f: &mut Frame, area: Rect, app: &App) {
 
 /// Bottone Adrenalina
 fn render_adrenaline_button(f: &mut Frame, area: Rect, app: &App) {
-    let style = if app.focused_section == FocusedSection::ForcedFour {
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD)
-    } else if app.forced_four_mode {
+    let style = if app.forced_four_mode {
         Style::default()
             .fg(Color::Green)
+            .add_modifier(Modifier::BOLD)
+    } else if app.focused_section == FocusedSection::ForcedFour {
+        Style::default()
+            .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD)
     } else {
         Style::default()

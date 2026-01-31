@@ -139,13 +139,13 @@ pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
         let is_selected = app.selected_node == Some(i);
         let is_trait_used = app.used_traits.contains(&i);
 
-        let node_style = if is_selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else if is_trait_used {
+        let node_style = if is_trait_used {
             Style::default()
                 .fg(Color::Green)
+                .add_modifier(Modifier::BOLD)
+        } else if is_selected {
+            Style::default()
+                .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()

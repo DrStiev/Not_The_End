@@ -1,6 +1,6 @@
 use ratatui::prelude::Rect;
 
-use super::super::app_state::{App, MAX_DRAW, MIN_DRAW};
+use super::super::app_state::App;
 use super::super::character::CharacterSection;
 use super::super::list::ListSection;
 use super::super::types::{FocusedSection, TabType};
@@ -85,14 +85,9 @@ impl App {
                 } else if is_inside(x, y, &self.draw_input_area) {
                     self.focused_section = DrawInput;
                 } else if is_inside(x, y, &self.random_mode_area) {
-                    self.random_mode = !self.random_mode;
+                    self.focused_section = RandomMode;
                 } else if is_inside(x, y, &self.forced_four_area) {
-                    self.forced_four_mode = !self.forced_four_mode;
-                    if self.forced_four_mode {
-                        self.draw_count = MAX_DRAW;
-                    } else {
-                        self.draw_count = MIN_DRAW;
-                    }
+                    self.focused_section = ForcedFour;
                 }
             }
             TabType::AdditionalInfoTab => {
